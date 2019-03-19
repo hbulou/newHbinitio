@@ -2,7 +2,7 @@ EXEC=Hbinitio.x
 all:
 	cd src ; make
 install:
-	cd src ; make install
+	mkdir -p bin ; cd src ; make install
 clean:
 	cd src ; make clean
 dav1d:
