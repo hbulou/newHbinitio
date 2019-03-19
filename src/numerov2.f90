@@ -22,7 +22,8 @@ contains
     integer::iloop
     character (len=1024) :: filename
 !    double precision::EHartree,EX
-    double precision,parameter::pi=3.1415926
+    double precision,parameter::pi=4.0*atan(1.0)
+
 
 
     ! ---------------------------------------------------

@@ -4,20 +4,13 @@ module param_mod
 contains
   ! --------------------------------------------------------------------------------------
   !
-  !              read_param()
+  !              init_param()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine read_param(param)
+  subroutine init_param(param)
     implicit none
-    character (len=1024)::line,redline
-    character (len=1024)::line2
-    character (len=32)::field(32)
-    integer::nfield,debidx,endidx
-    logical::exist_file
     type(t_param)::param
-    integer::lline,eqidx,i,di
-    double precision, parameter :: pi=3.1415927
-    logical::eol
+    double precision,parameter::pi=4.0*atan(1.0)
     param%ieof=0
     param%loopmax=1000
     param%prefix='./'
@@ -53,6 +46,26 @@ contains
     param%exchange=.FALSE.
     param%Z=1.0
     param%lorb=0
+  end subroutine init_param
+  ! --------------------------------------------------------------------------------------
+  !
+  !              read_param()
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine read_param(param)
+    implicit none
+    character (len=1024)::line,redline
+    character (len=1024)::line2
+    character (len=32)::field(32)
+    integer::nfield,debidx,endidx
+    logical::exist_file
+    type(t_param)::param
+    integer::lline,eqidx,i,di
+    logical::eol
+
+    call init_param(param)
+
+
     print *,'Reading ',param%inputfile
     open(unit=1,file=param%inputfile,form='formatted')
 

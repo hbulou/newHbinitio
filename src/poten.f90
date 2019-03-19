@@ -168,7 +168,7 @@ contains
     type(t_potential)::pot
     double precision :: pts(3),rsqr
 
-    double precision, parameter :: pi=3.1415927
+    double precision,parameter::pi=4.0*atan(1.0)
     double precision :: invsig
     double precision :: facperturb
     integer :: i,j,nn
