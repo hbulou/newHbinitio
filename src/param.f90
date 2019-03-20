@@ -59,76 +59,51 @@ contains
     logical::end_loop
     
     integer::i
-    if(field(1).eq."box_radius >") then
+
+    select case (field(1))
+    case("box_radius >") 
        read(field(2),*) param%box%radius
-    end if
-    if(field(1).eq."box_width >") then
+    case("box_width >") 
        read(field(2),*) param%box%width
-    end if
-    if(field(1).eq."box_shape >") then
+    case("box_shape >") 
        read(field(2),*) param%box%shape
-    end if
-    if(field(1).eq."box_center >") then
+    case("box_center >") 
        read(field(2),*) param%box%center(1)
        read(field(3),*) param%box%center(2)
        read(field(4),*) param%box%center(3)
-    end if
-    if(field(1).eq."cmd >") then
-       if(field(2).eq."end") then
-          end_loop=.TRUE.
-       end if
-    end if
-    if(field(1).eq."dimension >") then
+    case("dimension >") 
        read(field(2),*) param%dim
-    end if
-    if(field(1).eq."ETA >") then
+    case("ETA >") 
        read(field(2),*) param%ETA
-    end if
-    if(field(1).eq."exchange >") then
+    case("exchange >") 
        read(field(2),*) param%exchange
-    end if
-    if(field(1).eq."extrap_add >") then
+    case("extrap_add >") 
        read(field(2),*) param%extrap_add
-    end if
-    if(field(1).eq."extrapol >") then
+    case("extrapol >") 
        read(field(2),*) param%extrapol
-    end if
-    if(field(1).eq."hartree >") then
+    case("hartree >") 
        read(field(2),*) param%hartree
-    end if
-    if(field(1).eq."init_wf >") then
+    case("init_wf >") 
        read(field(2),*) param%init_wf
-    end if
-    if(field(1).eq."perturb_intensity >") then
+    case("perturb_intensity >") 
        read(field(2),*) param%perturb%Intensity
-    end if
-    if(field(1).eq."perturb_sigma >") then
+    case("perturb_sigma >") 
        read(field(2),*) param%perturb%sigma
-    end if
-    if(field(1).eq."perturb_shape >") then
+    case("perturb_shape >") 
        read(field(2),*) param%perturb%shape
-    end if
-    if(field(1).eq."perturb_location >") then
+    case("perturb_location >") 
        read(field(2),*) param%perturb%location(1)
        read(field(3),*) param%perturb%location(2)
        read(field(4),*) param%perturb%location(3)
-    end if
-    
-    
-    
-    if(field(1).eq."loopmax >") then
+    case("loopmax >") 
        read(field(2),*) param%loopmax
-    end if
-    if(field(1).eq."noccstate >") then
+    case("noccstate >") 
        read(field(2),*) param%noccstate
-    end if
-    if(field(1).eq."nvecmax >") then
+    case("nvecmax >") 
        read(field(2),*) param%nvecmax
-    end if
-    if(field(1).eq."nvecmin >") then
+    case("nvecmin >") 
        read(field(2),*) param%nvecmin
-    end if
-    if(field(1).eq."nvec_to_cvg >") then
+    case("nvec_to_cvg >") 
        read(field(2),*) param%nvec_to_cvg
        deallocate(param%list_idx_to_cvg)
        allocate(param%list_idx_to_cvg(param%nvec_to_cvg))
@@ -140,30 +115,29 @@ contains
        do i=1,param%nvec_to_cvg
           param%occupation(i)=1.0
        end do
-    end if
-    if(field(1).eq."Nx >") then
+    case("Nx >") 
        read(field(2),*) param%Nx
-    end if
-    if(field(1).eq."occupation >") then
+    case("occupation >") 
        do i=1,param%nvec_to_cvg
           read(field(1+i),*) param%occupation(i)
        end do
-    end if
-    if(field(1).eq."prefix >") then
+    case("prefix >") 
        read(field(2),*) param%prefix
-    end if
-    if(field(1).eq."restart >") then
+    case("restart >") 
        read(field(2),*) param%restart
-    end if
-    if(field(1).eq."scheme >") then
+    case("scheme >") 
        read(field(2),*) param%scheme
-    end if
-    if(field(1).eq."Zato >") then
+    case("Zato >") 
        read(field(2),*) param%Z
-    end if
-    if(field(1).eq."lorb >") then
+    case("lorb >") 
        read(field(2),*) param%lorb
-    end if
+    case("cmd >") 
+       if(field(2).eq."end") then
+          end_loop=.TRUE.
+       end if
+    end select
+
+
   end subroutine parse_line
   ! --------------------------------------------------------------------------------------
   !
