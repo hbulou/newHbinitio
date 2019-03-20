@@ -155,7 +155,8 @@ contains
     logical::exist_file
     integer::lline,eqidx,i,di
     logical::eol,end_loop
-
+!    type(t_molecule),allocatable:: molecule(:)
+!    integer::nmol
     call init_param(param)
 
 
