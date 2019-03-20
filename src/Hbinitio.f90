@@ -16,9 +16,9 @@ program Hbinitio
   use numerov_mod_dev
   use tdse_mod
   use operation_mod
+  use molecule_mod
   implicit none
   !  include 'mpif.h'
-  type(t_cvg) :: cvg
   type(t_time) :: time_spent
   type(t_param)::param,param2
   !------------------------------------------
@@ -55,28 +55,16 @@ program Hbinitio
   !       filename='pot_ext.cube'
   !       call save_cube_3D(pot_ext,filename,m)
 
-  cvg%nwfc=param%nvecmin
-  allocate(cvg%wfc(cvg%nwfc))
-  do i=1,cvg%nwfc
-     cvg%wfc%cvg=.FALSE.
-  end do
-  cvg%nvec_to_cvg=param%nvec_to_cvg
-  cvg%ETA=param%ETA
-  allocate(cvg%list_idx(param%nvec_to_cvg))
-  do i=1,param%nvec_to_cvg
-     cvg%list_idx(i)=param%list_idx_to_cvg(i)
-  end do
-  
-  allocate(perturb%coeff(cvg%nvec_to_cvg,cvg%nvec_to_cvg))          
+    allocate(perturb%coeff(molecule%cvg%nvec_to_cvg,molecule%cvg%nvec_to_cvg))          
     
   if(param%scheme.eq.'tdse') then
      print *,'Starting TDSE scheme'
-     call tdse(molecule,cvg,param)
+     call tdse(molecule,molecule%cvg,param)
   end if
 
   if(param%scheme.eq.'numerov') then
      print *,'Starting NUMEROV scheme'
-     call numerov(molecule,cvg,param)
+     call numerov(molecule,molecule%cvg,param)
   end if
 
   if(param%scheme.eq.'operation') then
@@ -87,7 +75,7 @@ program Hbinitio
   
   if(param%scheme.eq.'davidson') then
      print *,'Starting DAVIDSON scheme'
-     call davidson(param,molecule%mesh,cvg,molecule,molecule%pot,time_spent)
+     call davidson(param,molecule%mesh,molecule%cvg,molecule,molecule%pot,time_spent)
      
      ! if(param%extrapol) then
      !    call read_param(param2)
@@ -145,7 +133,7 @@ program Hbinitio
   deallocate(perturb%coeff)
 !  call free_mesh(molecule%mesh)
   call cpu_time(time_spent%end)
-  if (cvg%ncvg.ge.cvg%nvec_to_cvg) print *,'Main > Job DONE !'
+  if (molecule%cvg%ncvg.ge.molecule%cvg%nvec_to_cvg) print *,'Main > Job DONE !'
   print '("Main > Total Time = ",e16.6," seconds.")',time_spent%end-time_spent%start
 !  call mpi_finalize(ierr)
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -155,26 +143,6 @@ program Hbinitio
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 contains
-  ! --------------------------------------------------------------------------------------
-  !
-  !             new_molecule()
-  !
-  ! --------------------------------------------------------------------------------------
-  subroutine new_molecule(molecule,param)
-    implicit none
-    type(t_molecule)::molecule
-    type(t_param)::param
-
-    call new_mesh(molecule%mesh,param)
-    call init_pot(molecule%mesh,molecule%pot)
-    call save_potential(param,molecule%mesh,molecule)
-    molecule%wf%nwfc=param%nvecmin
-    allocate(molecule%wf%eps(molecule%wf%nwfc))
-    allocate(molecule%wf%epsprev(molecule%wf%nwfc))
-    allocate(molecule%wf%deps(molecule%wf%nwfc))
-    allocate(molecule%wf%wfc(molecule%mesh%nactive,molecule%wf%nwfc))
-    allocate(molecule%rho(molecule%mesh%nactive))
-  end subroutine new_molecule
   ! --------------------------------------------------------------------------------------
   !
   !             V_from_wfc()

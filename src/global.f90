@@ -149,6 +149,7 @@ module global
      type(t_mesh)::mesh               !
      type(t_potential)::pot
      double precision,allocatable::rho(:)
+     type(t_cvg) :: cvg
   end type t_molecule
   !------------------------------------------
 

@@ -4,10 +4,10 @@ INC=
 FC=gfortran
 FCPARA=mpif90
 FCOPT= -fimplicit-none -finit-local-zero  -fopenmp -finit-local-zero # -Wunused -Wall -Wargument-mismatch -Wimplicit-interface
-SRC=global.f90  param.f90 tools.f90 IO.f90 poten.f90  numerov2.f90  mesh.f90 davidson.f90   time_tracking.f90 ConjugateGradient.f90 tdse_mod.f90 operation.f90 Hbinitio.f90 
+SRC=global.f90  param.f90 tools.f90 IO.f90 poten.f90  numerov2.f90  mesh.f90 davidson.f90   time_tracking.f90 ConjugateGradient.f90 tdse_mod.f90 operation.f90 molecule.f90 Hbinitio.f90 
 
 EXEC=Hbinitio.x
-OBJ=time_tracking.o global.o poten.o IO.o param.o tools.o  mesh.o davidson.o ConjugateGradient.o numerov2.o  pseudopotential.o operation.o tdse_mod.o
+OBJ=time_tracking.o global.o poten.o IO.o param.o tools.o  mesh.o davidson.o ConjugateGradient.o numerov2.o  pseudopotential.o operation.o tdse_mod.o molecule.o
 all: $(OBJ) Hbinitio.f90
 	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack	
 #serial:  $(SRC)
@@ -26,6 +26,8 @@ tools.o: tools.f90 param.o global.o mesh.o
 param.o: param.f90  global.o
 	$(FC) $(FCOPT) $< -c
 mesh.o: mesh.f90  global.o
+	$(FC) $(FCOPT) $< -c
+molecule.o: molecule.f90 global.o mesh.o poten.o  
 	$(FC) $(FCOPT) $< -c
 davidson.o: davidson.f90  global.o time_tracking.o mesh.o poten.o param.o
 	$(FC) $(FCOPT) $< -c

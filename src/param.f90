@@ -170,6 +170,7 @@ contains
     end do
     close(1)    
 
+    read(*,*)  
 
     if(param%dim.lt.3) param%box%center(3)=0.0
     if(param%dim.lt.2) param%box%center(2)=0.0
