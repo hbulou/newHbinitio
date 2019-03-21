@@ -3,7 +3,7 @@ module davidson_mod
   use time_tracking
   use mesh_mod
   use poten
-  use param_mod
+!  use param_mod
   use IO
   implicit none
 contains
@@ -221,9 +221,10 @@ contains
 !       end if
     end do
     !call cpu_time(inter)
-    open(unit=1,file=param%filenameeigen,form='formatted',status='unknown',access='append')
-    write(1,*) iloop,molecule%wf%eps(1:nvecmin)
-    close(1)
+    print *,"param%filenameeigen=",param%filenameeigen
+    open(unit=3,file=param%filenameeigen,form='formatted',status='unknown',access='append')
+    write(3,*) iloop,molecule%wf%eps(3:nvecmin)
+    close(3)
 
 
     call cpu_time(time_spent%end_loc)

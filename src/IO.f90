@@ -95,32 +95,6 @@ contains
   !              save_wavefunction(param,mesh,V,molecule)
   !
   ! --------------------------------------------------------------------------------------
-  subroutine save_potential(param,mesh,molecule)
-    implicit none
-    type(t_param)::param
-    type(t_mesh)::mesh
-    type(t_molecule)::molecule
-
-    integer::nn
-    character (len=1024) :: filename
-    write(filename,'(a,a)') param%prefix(:len_trim(param%prefix)),'/pot_ext.agr'    
-    open(unit=1,file=filename,form='formatted',status='unknown')
-    write(1,*) "@with g0"
-    write(1,*) '@    xaxis  label "x (ang.)"'
-    write(1,*) '@    yaxis  label "Energy (eV)"'
-    write(1,*) "@target G0.S0"
-    write(1,*) "@type xy"
-    do nn=1,mesh%nactive
-       write(1,*) a02ang*mesh%node(nn)%q(1),Ha2eV*molecule%pot%ext(nn)
-    end do
-    write(1,*) "&"
-    close(1)
-  end subroutine save_potential
-  ! --------------------------------------------------------------------------------------
-  !
-  !              save_wavefunction(param,mesh,V,molecule)
-  !
-  ! --------------------------------------------------------------------------------------
   subroutine save_wavefunction(param,mesh,V,molecule)
     implicit none
     type(t_param)::param

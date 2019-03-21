@@ -24,4 +24,6 @@ perturb_location=35.0 15.0 0.0
 Zato=1.0
 hartree=.FALSE.
 exchange=.FALSE.
+cmd=molecule new
+cmd=davidson
 cmd=end

@@ -1,5 +1,9 @@
 module param_mod
+  use time_tracking
   use global
+  use mesh_mod
+  use poten
+  use davidson_mod
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -52,12 +56,15 @@ contains
   !              parse_line()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine parse_line(param,field,end_loop)
+  subroutine parse_line(param,field,end_loop,nmol,molecule,time_spent)
     implicit none
     type(t_param)::param
     character (len=32)::field(32)
     logical::end_loop
-    
+    integer::nmol
+    type(t_molecule),allocatable:: molecule(:)
+    type(t_molecule),allocatable:: junk(:) 
+    type(t_time) :: time_spent   
     integer::i
 
     select case (field(1))
@@ -131,10 +138,35 @@ contains
        read(field(2),*) param%Z
     case("lorb >") 
        read(field(2),*) param%lorb
-    case("cmd >") 
-       if(field(2).eq."end") then
+    case("cmd >")
+       print *,'<----- ',field(2)
+       select case (field(2))
+       case("end") 
           end_loop=.TRUE.
-       end if
+       case("molecule") 
+          !          print *,field,field(1),field(2),"<-",trim(field(3)),"->"
+          select case (trim(field(3)))
+          case(" new")
+             nmol=nmol+1
+             print *,allocated(molecule)
+             if(.not.(allocated(molecule))) then
+                nmol=1
+                allocate(molecule(nmol))
+                call new_molecule(molecule(nmol),param)
+             else
+                call exit()
+                allocate(junk(nmol-1))
+                call move_alloc(molecule,junk)
+                allocate(molecule(nmol))
+                call move_alloc(junk,molecule)
+             end if
+             print *, "# creating a molecule -> ",nmol," molecule(s)" 
+          end select ! field(3)
+          case ("davidson")
+             call print_param(param)
+             call davidson(param,molecule(nmol)%mesh,&
+                  molecule(nmol)%cvg,molecule(nmol),molecule(nmol)%pot,time_spent)    
+          end select  ! field(2)
     end select
 
 
@@ -144,10 +176,14 @@ contains
   !              read_param()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine read_param(param)
+  subroutine read_param(param,nmol,molecule,time_spent)
     implicit none
     type(t_param)::param
-
+    integer::nmol
+    type(t_molecule),allocatable:: molecule(:)
+    type(t_time) :: time_spent   
+    
+    
     character (len=1024)::line,redline
     character (len=1024)::line2
     character (len=32)::field(32)
@@ -155,83 +191,66 @@ contains
     logical::exist_file
     integer::lline,eqidx,i,di
     logical::eol,end_loop
-!    type(t_molecule),allocatable:: molecule(:)
-!    integer::nmol
+
     call init_param(param)
 
-
-    print *,'Reading ',param%inputfile
-    open(unit=1,file=param%inputfile,form='formatted')
+    print *,'Reading ',trim(param%inputfile)
+    open(unit=2,file=param%inputfile,form='formatted')
     end_loop=.FALSE.
     do while((.not.(is_iostat_end(param%ieof))).and.(.not.(end_loop)))
-       read(1,'(A)') line
+       read(2,'(A)') line
        call line_parser(line,nfield,field)
        print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
-       call parse_line(param,field,end_loop)
+       call parse_line(param,field,end_loop,nmol,molecule,time_spent)
     end do
-    close(1)    
+    close(2)    
 
+    call exit()
+        
     read(*,*)  
 
-    if(param%dim.lt.3) param%box%center(3)=0.0
-    if(param%dim.lt.2) param%box%center(2)=0.0
-    
+   end subroutine read_param
 
-    print *,'#prefix=',param%prefix
-    call system("mkdir "//param%prefix)
-    write(param%filenameeigen,'(a,a)') param%prefix(:len_trim(param%prefix)),'/eigenvalues.dat'
-    inquire (file=param%filenameeigen,exist=exist_file)
-    if(exist_file) then
-       call system("rm "//param%filenameeigen)
-    end if
-    open(unit=1,file=param%filenameeigen,form='formatted',status='unknown');   close(1)
-!    write(filename,'(a,a)') param%prefix(:len_trim(param%prefix)),'/evectors.dat'
- !   print *,filename
-  !  open(unit=1,file=filename,form='formatted',status='unknown')
-   ! close(1)
-    !stop
-    param%filenameeigen =param%filenameeigen(:len_trim(param%filenameeigen ))
-    print *,'#filenameeigen=',trim(param%filenameeigen)
-
-    write(param%filenrj,'(a,a)') trim(param%prefix),'/energy.dat'
-    inquire (file=param%filenrj,exist=exist_file)
-    if(exist_file) then
-       call system("rm "//param%filenrj)
-    end if
-    open(unit=1,file=param%filenrj,form='formatted',status='unknown') ;close(1)
-    print *,'#filenrj=',trim(param%filenrj)
-    print *,'#restart=',param%restart
-    print *,'#scheme=',trim(param%scheme)
-    print *,'#init_wf=',param%init_wf
-    print *,'#extrapol=',param%extrapol
-    print *,'#extrap_add=',param%extrap_add
-    print *,'#loopmax=',param%loopmax
-    print *,'#nvecmin=',param%nvecmin
-    print *,'#nvecmax=',param%nvecmax
-    print *,'#ETA=',param%ETA
-    print *,'#nvec_to_cvg=',param%nvec_to_cvg
-    print *,"#occupation= ",(param%occupation(i),i=1,param%nvec_to_cvg)
-    print *,'#Zato=',param%Z
-    print *,'#lorb=',param%lorb
-    print *,'#hartree=',param%hartree
-    print *,'#exchange=',param%exchange
-    print *,'#box_width=',param%box%width
-    print *,'#box_radius=',param%box%radius
-    print *,'#box_shape=',param%box%shape
-    print *,'#box_center=[',param%box%center(1),',',param%box%center(2),',',param%box%center(3),']'
-    print *,'#Nx=',param%nx
-    print *,'#noccstate=',param%noccstate
-    print *,'#dh=',param%box%width/(param%Nx+1)
-    print *,'#Dimension of the mesh=',param%dim
-    print *,'#Perturbation shape=',param%perturb%shape
-    print *,'#Magnitude of the perturbation=',param%perturb%Intensity
-    print *,'#Spread of the perturbation=',param%perturb%sigma
-    print *,'#Perturbation location=[',param%perturb%location(1),',',param%perturb%location(2),',',param%perturb%location(3),']'
-    
-  end subroutine read_param
-
-
+ ! --------------------------------------------------------------------------------------
+  !
+  !              print_param()
+  !
   ! --------------------------------------------------------------------------------------
+
+     subroutine print_param(param)
+      implicit none
+      integer::i
+      type(t_param)::param
+      print *,'#filenrj=',trim(param%filenrj)
+      print *,'#restart=',param%restart
+      print *,'#scheme=',trim(param%scheme)
+      print *,'#init_wf=',param%init_wf
+      print *,'#extrapol=',param%extrapol
+      print *,'#extrap_add=',param%extrap_add
+      print *,'#loopmax=',param%loopmax
+      print *,'#nvecmin=',param%nvecmin
+      print *,'#nvecmax=',param%nvecmax
+      print *,'#ETA=',param%ETA
+      print *,'#nvec_to_cvg=',param%nvec_to_cvg
+      print *,"#occupation= ",(param%occupation(i),i=1,param%nvec_to_cvg)
+      print *,'#Zato=',param%Z
+      print *,'#lorb=',param%lorb
+      print *,'#hartree=',param%hartree
+      print *,'#exchange=',param%exchange
+      print *,'#box_width=',param%box%width
+      print *,'#box_radius=',param%box%radius
+      print *,'#box_shape=',param%box%shape
+      print *,'#box_center=[',param%box%center(1),',',param%box%center(2),',',param%box%center(3),']'
+      print *,'#Nx=',param%nx
+      print *,'#noccstate=',param%noccstate
+      print *,'#dh=',param%box%width/(param%Nx+1)
+      print *,'#Dimension of the mesh=',param%dim
+      print *,'#Perturbation shape=',param%perturb%shape
+      print *,'#Magnitude of the perturbation=',param%perturb%Intensity
+      print *,'#Spread of the perturbation=',param%perturb%sigma
+      print *,'#Perturbation location=[',param%perturb%location(1),',',param%perturb%location(2),',',param%perturb%location(3),']'
+    end subroutine print_param
+ ! --------------------------------------------------------------------------------------
   !
   !              line_parser()
   !
@@ -265,6 +284,72 @@ contains
            end do
         end if
       end subroutine line_parser
+    ! --------------------------------------------------------------------------------------
+  !
+  !             new_molecule()
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine new_molecule(molecule,param)
+    implicit none
+    type(t_molecule)::molecule
+    type(t_param)::param
+
+    logical::exist_file
+    integer::i
+
+    print *," Starting new_molecule()"
+
+
+
+if(param%dim.lt.3) param%box%center(3)=0.0
+    if(param%dim.lt.2) param%box%center(2)=0.0
+    
+    print *,'#prefix=',param%prefix
+    call system("mkdir "//param%prefix)
+    write(param%filenameeigen,'(a,a)') param%prefix(:len_trim(param%prefix)),'/eigenvalues.dat'
+    inquire (file=param%filenameeigen,exist=exist_file)
+    if(exist_file) then
+       call system("rm "//param%filenameeigen)
+    end if
+    open(unit=1,file=param%filenameeigen,form='formatted',status='unknown');   close(1)
+    param%filenameeigen =param%filenameeigen(:len_trim(param%filenameeigen ))
+    print *,'#filenameeigen=',trim(param%filenameeigen)
+
+    write(param%filenrj,'(a,a)') trim(param%prefix),'/energy.dat'
+    inquire (file=param%filenrj,exist=exist_file)
+    if(exist_file) then
+       call system("rm "//param%filenrj)
+    end if
+    open(unit=1,file=param%filenrj,form='formatted',status='unknown') ;close(1)
+
+    
+    call new_mesh(molecule%mesh,param)
+    call init_pot(molecule%mesh,molecule%pot)
+    call save_potential(param,molecule%mesh,molecule)
+    molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
+    allocate(molecule%wf%eps(molecule%wf%nwfc))
+    allocate(molecule%wf%epsprev(molecule%wf%nwfc))
+    allocate(molecule%wf%deps(molecule%wf%nwfc))
+    allocate(molecule%wf%wfc(molecule%mesh%nactive,molecule%wf%nwfc))
+    allocate(molecule%rho(molecule%mesh%nactive))
+
+    molecule%cvg%nwfc=param%nvecmin
+    allocate(molecule%cvg%wfc(molecule%cvg%nwfc))
+    do i=1,molecule%cvg%nwfc
+       molecule%cvg%wfc%cvg=.FALSE.
+    end do
+    molecule%cvg%nvec_to_cvg=param%nvec_to_cvg
+    molecule%cvg%ETA=param%ETA
+    allocate(molecule%cvg%list_idx(param%nvec_to_cvg))
+    do i=1,param%nvec_to_cvg
+       molecule%cvg%list_idx(i)=param%list_idx_to_cvg(i)
+    end do
+
+
+    
+    print *,"End of new_molecule()"
+  end subroutine new_molecule
+
     
 
 end module param_mod

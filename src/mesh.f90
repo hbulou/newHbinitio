@@ -1,6 +1,5 @@
 module mesh_mod
   use global
-  use param_mod
   implicit none
 contains
   ! -----------------------------------------------
@@ -123,6 +122,7 @@ contains
     integer::i,j,k
     double precision::d,x,y,z
     logical::CompDomain
+    print *," Starting set_nodes()"
     allocate(mesh%ijk_to_idx(mesh%Nx,mesh%Ny,mesh%Nz))
     mesh%nactive=0
     mesh%nunactive=mesh%Ntot+1
@@ -235,7 +235,9 @@ contains
 
 !      mesh%N=mesh%nactive
 !      stop
-    end subroutine set_nodes
+
+    print *,"End of set_nodes()"
+  end subroutine set_nodes
   ! -----------------------------------------------
   !
   !          free_mesh(m)

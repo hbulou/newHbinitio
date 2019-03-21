@@ -1,7 +1,7 @@
 module tools
   use global
   use mesh_mod
-  use param_mod
+!  use param_mod
  
   implicit none
   !------------------------------------------

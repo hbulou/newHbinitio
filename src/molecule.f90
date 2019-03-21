@@ -1,7 +1,8 @@
 module molecule_mod
   use global
-  use mesh_mod
+  use IO
   use poten
+  use mesh_mod
   implicit none
   
 contains
