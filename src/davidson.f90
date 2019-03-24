@@ -221,7 +221,7 @@ contains
 !       end if
     end do
     !call cpu_time(inter)
-    print *,"param%filenameeigen=",param%filenameeigen
+    !    print *,"param%filenameeigen=",param%filenameeigen
     open(unit=3,file=param%filenameeigen,form='formatted',status='unknown',access='append')
     write(3,*) iloop,molecule%wf%eps(3:nvecmin)
     close(3)

@@ -4,59 +4,15 @@ module param_mod
   use mesh_mod
   use poten
   use davidson_mod
+  use tools
   implicit none
 contains
-  ! --------------------------------------------------------------------------------------
-  !
-  !              init_param()
-  !
-  ! --------------------------------------------------------------------------------------
-  subroutine init_param(param)
-    implicit none
-    type(t_param)::param
-    double precision,parameter::pi=4.0*atan(1.0)
-    param%ieof=0
-    param%loopmax=1000
-    param%prefix='./'
-    param%scheme='numerov'
-    param%restart=.FALSE.
-    param%init_wf=.TRUE.
-    param%extrapol=.FALSE.
-    param%extrap_add=10
-    param%nvecmin=20
-    param%nvecmax=41
-    param%Nx=30
-    param%noccstate=1
-    param%nvec_to_cvg=1
-    allocate(param%list_idx_to_cvg(param%nvec_to_cvg))
-    allocate(param%occupation(param%nvec_to_cvg))
-    param%list_idx_to_cvg(1)=1
-    param%ETA=1.0e-3
-    param%dim=1
-    param%box%width=pi/sqrt(2.0)
-    param%box%radius=param%box%width
-    param%box%shape='cube'
-    param%box%center(1)=0.5
-    param%box%center(2)=0.5
-    param%box%center(3)=0.5
-    param%perturb%Intensity=1.0
-    param%perturb%sigma=1.0
-    param%perturb%Intensity=1.0
-    param%perturb%location(1)=0.0
-    param%perturb%location(2)=0.0
-    param%perturb%location(3)=0.0
-    param%perturb%shape='gaussian'
-    param%hartree=.FALSE.
-    param%exchange=.FALSE.
-    param%Z=1.0
-    param%lorb=0
-  end subroutine init_param
   ! --------------------------------------------------------------------------------------
   !
   !              parse_line()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine parse_line(param,field,end_loop,nmol,molecule,time_spent)
+  subroutine parse_line(param,field,nfield,end_loop,nmol,molecule,time_spent)
     implicit none
     type(t_param)::param
     character (len=32)::field(32)
@@ -65,8 +21,17 @@ contains
     type(t_molecule),allocatable:: molecule(:)
     type(t_molecule),allocatable:: junk(:) 
     type(t_time) :: time_spent   
-    integer::i
+    integer::i,nfield,ifield,idxwfc
 
+    double precision,allocatable::junk_wfc(:)
+    double complex,allocatable::tdse_wfc(:)
+    double precision,allocatable::coeff(:)
+    double precision::norm
+
+    double precision::r0,sig,Intens
+
+    double precision, external :: ddot
+    
     select case (field(1))
     case("box_radius >") 
        read(field(2),*) param%box%radius
@@ -138,11 +103,22 @@ contains
        read(field(2),*) param%Z
     case("lorb >") 
        read(field(2),*) param%lorb
+       ! ---------------------------------------------------------------
+       !
+       !                    COMMAND PART
+       !
+       ! --------------------------------------------------------------
     case("cmd >")
        print *,'<----- ',field(2)
        select case (field(2))
+          !
+          ! to leave the command part
+          !
        case("end") 
           end_loop=.TRUE.
+          !
+          ! to create a new molecule
+          !
        case("molecule") 
           !          print *,field,field(1),field(2),"<-",trim(field(3)),"->"
           select case (trim(field(3)))
@@ -162,14 +138,110 @@ contains
              end if
              print *, "# creating a molecule -> ",nmol," molecule(s)" 
           end select ! field(3)
-          case ("davidson")
-             call print_param(param)
-             call davidson(param,molecule(nmol)%mesh,&
+          !
+          ! to compute the wavefunction with davidson
+          !
+       case ("davidson")
+          call print_param(param)
+          call davidson(param,molecule(nmol)%mesh,&
                   molecule(nmol)%cvg,molecule(nmol),molecule(nmol)%pot,time_spent)    
-          end select  ! field(2)
-    end select
+          !
+          ! to operation
+          !
+       case ("operation")
+          print *,"nfield=",nfield
+          allocate(junk_wfc(molecule(nmol)%mesh%nactive))
+          junk_wfc=0.0
+          allocate(coeff(1))
+          do ifield=3,nfield-1,2
+             coeff(1)=str2real(field(ifield))
+             idxwfc=str2int(field(ifield+1))
+             print *,"(nfield,coeff,idxwfc)=",nfield,coeff(1),idxwfc
+             call daxpy(molecule(nmol)%mesh%nactive,&
+                  coeff(1),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+                  junk_wfc,1)  ! junk_wfc+coeff*wfc(idxwfc) -> junk_wfc
+          end do
+          deallocate(coeff)
+          open(unit=10,file="operation.dat",form='formatted')
+          do i=1,molecule(nmol)%mesh%nactive
+             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i),&
+                  ( molecule(nmol)%wf%wfc(i,str2int(field(ifield+1))), ifield=3,nfield-1,2)
+          end do
+          close(10)
+          deallocate(junk_wfc)
+          ! ----------------------------------------------------------------------
+          !
+          !              TDSE
+          !
+          ! ----------------------------------------------------------------------
+       case("tdse")
+          allocate(tdse_wfc(molecule(nmol)%mesh%nactive))
+          allocate(junk_wfc(molecule(nmol)%mesh%nactive))
+          tdse_wfc=0.0
+          junk_wfc=0.0
+          r0=20.
+          sig=2.0
+          Intens=1.0
+          do i=1,molecule(nmol)%mesh%nactive
+             junk_wfc(i)=gauss(i*molecule(nmol)%mesh%dx,r0,sig,Intens)
+          end do
+          open(unit=10,file="tdse.dat",form='formatted')
+          do i=1,molecule(nmol)%mesh%nactive
+             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+          end do
+          close(10)
+          allocate(coeff(param%nvec_to_cvg))
+          do  idxwfc=1,param%nvec_to_cvg
+             coeff(idxwfc)=-molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
+                  junk_wfc,1,&
+                  molecule(nmol)%wf%wfc(:,idxwfc),1)
+             call daxpy(molecule(nmol)%mesh%nactive,&
+                coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+                junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
+             norm=sqrt(molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
+                  junk_wfc,1,&
+                  junk_wfc,1))
+
+             print *,"(coeff,norm)=",coeff(idxwfc),norm
+          end do
+          
+          open(unit=10,file="tdse1.dat",form='formatted')
+          do i=1,molecule(nmol)%mesh%nactive
+             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+          end do
+          close(10)
+          
+          junk_wfc=0.0
+          do  idxwfc=1,param%nvec_to_cvg
+             call daxpy(molecule(nmol)%mesh%nactive,&
+                  -coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+                  junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
+          end do
+          
+          open(unit=10,file="tdse2.dat",form='formatted')
+          do i=1,molecule(nmol)%mesh%nactive
+             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+          end do
+          close(10)
+          
+           !      print *,'Starting TDSE scheme'
+           !      call tdse(molecule,molecule%cvg,param)
 
 
+           
+           deallocate(coeff)
+           deallocate(tdse_wfc)
+          !
+          ! to get info
+          !
+       case ("info")
+          call print_param(param)
+          print *,nmol," molecule(s)"
+       end select  ! field(2)
+          !
+          !
+          !
+       end select
   end subroutine parse_line
   ! --------------------------------------------------------------------------------------
   !
@@ -182,8 +254,7 @@ contains
     integer::nmol
     type(t_molecule),allocatable:: molecule(:)
     type(t_time) :: time_spent   
-    
-    
+      
     character (len=1024)::line,redline
     character (len=1024)::line2
     character (len=32)::field(32)
@@ -201,17 +272,59 @@ contains
        read(2,'(A)') line
        call line_parser(line,nfield,field)
        print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
-       call parse_line(param,field,end_loop,nmol,molecule,time_spent)
+       call parse_line(param,field,nfield,end_loop,nmol,molecule,time_spent)
     end do
     close(2)    
 
     call exit()
-        
     read(*,*)  
-
    end subroutine read_param
-
- ! --------------------------------------------------------------------------------------
+  ! --------------------------------------------------------------------------------------
+  !
+  !              init_param()
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine init_param(param)
+    implicit none
+    type(t_param)::param
+    double precision,parameter::pi=4.0*atan(1.0)
+    param%ieof=0
+    param%loopmax=1000
+    param%prefix='./'
+    param%scheme='numerov'
+    param%restart=.FALSE.
+    param%init_wf=.TRUE.
+    param%extrapol=.FALSE.
+    param%extrap_add=10
+    param%nvecmin=20
+    param%nvecmax=41
+    param%Nx=30
+    param%noccstate=1
+    param%nvec_to_cvg=1
+    allocate(param%list_idx_to_cvg(param%nvec_to_cvg))
+    allocate(param%occupation(param%nvec_to_cvg))
+    param%list_idx_to_cvg(1)=1
+    param%ETA=1.0e-3
+    param%dim=1
+    param%box%width=pi/sqrt(2.0)
+    param%box%radius=param%box%width
+    param%box%shape='cube'
+    param%box%center(1)=0.5
+    param%box%center(2)=0.5
+    param%box%center(3)=0.5
+    param%perturb%Intensity=1.0
+    param%perturb%sigma=1.0
+    param%perturb%Intensity=1.0
+    param%perturb%location(1)=0.0
+    param%perturb%location(2)=0.0
+    param%perturb%location(3)=0.0
+    param%perturb%shape='gaussian'
+    param%hartree=.FALSE.
+    param%exchange=.FALSE.
+    param%Z=1.0
+    param%lorb=0
+  end subroutine init_param
+  ! --------------------------------------------------------------------------------------
   !
   !              print_param()
   !

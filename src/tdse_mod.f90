@@ -10,7 +10,7 @@ contains
       type(t_cvg)::cvg
       type(t_param)::param
 
-      double precision::x,sigsqr,sig,k0,pi
+      double precision::x,sigsqr,sig,k0
       double precision::dxsqr,dt,a,b,dxsqrdt,c,d,normesqr
       double precision::g,h
       character (len=1024) :: filename
@@ -29,7 +29,6 @@ contains
       
       oldt=1
       newt=2
-      PI=4.D0*DATAN(1.D0)
       allocate(e(molecule%mesh%nactive))
       allocate(f(molecule%mesh%nactive))
       allocate(wfc(molecule%mesh%nactive,2))

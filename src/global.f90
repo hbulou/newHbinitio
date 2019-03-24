@@ -1,5 +1,6 @@
 module global
   implicit none
+  double precision,parameter::pi=4.0*atan(1.0)
   !
   ! Bohr radius (m)     
   double precision,parameter::a02m=0.529177249D-10

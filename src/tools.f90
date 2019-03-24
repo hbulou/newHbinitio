@@ -313,4 +313,33 @@ contains
 
   end function interpolate
 
+  ! --------------------------------------------------------------------------------------
+  !
+  !             str2___()
+  !
+  ! --------------------------------------------------------------------------------------
+  function str2int(str) result(res)
+    implicit none
+    character(len=*),intent(in)::str
+    integer::res
+    read(str,*) res
+  end function str2int
+
+  function str2real(str) result(res)
+    implicit none
+    character(len=*),intent(in)::str
+    double precision::res
+    read(str,*) res
+  end function str2real
+  ! --------------------------------------------------------------------------------------
+  !
+  !             gaussian()
+  !
+  ! --------------------------------------------------------------------------------------
+  function gauss(r,r0,sig,I) result(res)
+    implicit none
+    double precision::r,r0,sig,res,I
+    res=I*exp(-0.5*((r-r0)/sig)**2)/(sqrt(2*pi)*sig)
+  end function gauss
+    
 end module tools

@@ -37,12 +37,12 @@ program Hbinitio
 
   
   i = 0
-  DO
-     CALL get_command_argument(i, arg)
-     IF (LEN_TRIM(arg) == 0) EXIT
-     if(i.eq.1) param%inputfile=TRIM(arg)
+  do
+     call get_command_argument(i, arg)
+     if(len_trim(arg) == 0) exit
+     if(i.eq.1) param%inputfile=trim(arg)
      i = i+1
-  END DO
+  end do
   
   call time_tracking_init(time_spent)
   !  call mpi_init(ierr )
