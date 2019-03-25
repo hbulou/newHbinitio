@@ -1,8 +1,6 @@
 module time_tracking
+  use global
   implicit none
-  type t_time
-     real :: start,end,start_loc,end_loc
-  end type t_time
 contains
   ! -----------------------------------------------
   subroutine time_tracking_init(time_spent)

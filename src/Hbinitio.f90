@@ -18,63 +18,45 @@ program Hbinitio
   use operation_mod
   implicit none
   !  include 'mpif.h'
-  type(t_time) :: time_spent
-  type(t_param)::param,param2
   !------------------------------------------
   type t_perturb
      double precision,allocatable::coeff(:,:)
   end type t_perturb
   type(t_perturb)::perturb
-  type(t_molecule):: molecule,molecule2
   !------------------------------------------
-  integer :: i,j,k,n,l
-  double precision::x,y,z
-  integer::nmol
-  type(t_molecule),allocatable:: molarray(:)
+  integer :: i  
   !  integer::ierr,my_id,num_procs
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   CHARACTER(len=32) :: arg
-
+  type(t_system)::syst
   
   i = 0
   do
      call get_command_argument(i, arg)
      if(len_trim(arg) == 0) exit
-     if(i.eq.1) param%inputfile=trim(arg)
+     if(i.eq.1) syst%inputfile=trim(arg)
      i = i+1
   end do
   
-  call time_tracking_init(time_spent)
+  call time_tracking_init(syst%time_spent)
   !  call mpi_init(ierr )
   !  call MPI_COMM_RANK (MPI_COMM_WORLD, my_id, ierr)
   !  call MPI_COMM_SIZE (MPI_COMM_WORLD, num_procs, ierr)
-
-  nmol=0
-  call read_param(param,nmol,molarray,time_spent)
+  call read_param(syst)
   
-!   call new_molecule(molecule,param)
+  
     
-!   ! call read_pp(pp)
-!   !       filename='pot_ext.cube'
-!   !       call save_cube_3D(pot_ext,filename,m)
-
-!     allocate(perturb%coeff(molecule%cvg%nvec_to_cvg,molecule%cvg%nvec_to_cvg))          
-    
-!   if(param%scheme.eq.'tdse') then
-!      print *,'Starting TDSE scheme'
-!      call tdse(molecule,molecule%cvg,param)
-!   end if
-
-!   if(param%scheme.eq.'numerov') then
-!      print *,'Starting NUMEROV scheme'
-!      call numerov(molecule,molecule%cvg,param)
-!   end if
-
-!   if(param%scheme.eq.'operation') then
-!      print *,'Starting OPERATION scheme'
-!      call operation(param,molecule%mesh)     
-!   end if
-
+  !   ! call read_pp(pp)
+  !   !       filename='pot_ext.cube'
+  !   !       call save_cube_3D(pot_ext,filename,m)
+  
+  !     allocate(perturb%coeff(molecule%cvg%nvec_to_cvg,molecule%cvg%nvec_to_cvg))          
+  
+  !   if(param%scheme.eq.'numerov') then
+  !      print *,'Starting NUMEROV scheme'
+  !      call numerov(molecule,molecule%cvg,param)
+  !   end if
+  
   
 !   if(param%scheme.eq.'davidson') then
 !      print *,'Starting DAVIDSON scheme'

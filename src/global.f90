@@ -12,6 +12,10 @@ module global
   ! Hartree energy  (eV)
   double precision,parameter::Ha2eV=27.211396380
   ! ------------------------------------------
+  type t_time
+     real :: start,end,start_loc,end_loc
+  end type t_time
+  ! ------------------------------------------
   type t_potential
      double precision,allocatable :: ext(:)      ! external potential
      double precision,allocatable :: hartree(:)  ! hartreel potential
@@ -45,11 +49,10 @@ module global
   ! -------------------------------------------------------
   type t_param
      logical::restart
-     character(len=32)::scheme    ! numerov || davidson
+     character (len=32)::scheme    ! numerov || davidson
      character(len=32)::prefix
      character (len=1024)::filenameeigen
      character (len=1024)::filenrj
-     character (len=1024)::inputfile
      logical::init_wf
      logical::extrapol
      integer::extrap_add
@@ -151,7 +154,15 @@ module global
      type(t_potential)::pot
      double precision,allocatable::rho(:)
      type(t_cvg) :: cvg
+     type(t_param)::param
   end type t_molecule
+  !------------------------------------------
+  type t_system
+     type(t_time)::time_spent
+     character (len=1024)::inputfile
+     integer::nmol
+     type(t_molecule),allocatable:: molecule(:)
+  end type t_system
   !------------------------------------------
 
 contains

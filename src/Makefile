@@ -10,8 +10,8 @@ EXEC=Hbinitio.x
 OBJ=time_tracking.o global.o poten.o  IO.o param.o   mesh.o tools.o davidson.o ConjugateGradient.o numerov2.o  pseudopotential.o operation.o tdse_mod.o  
 
 all: Hbinitio.f90 
-	$(FC) $(FCOPT) time_tracking.f90 -c
 	$(FC) $(FCOPT) global.f90 -c
+	$(FC) $(FCOPT) time_tracking.f90 -c
 	$(FC) $(FCOPT) poten.f90 -c
 	$(FC) $(FCOPT) mesh.f90 -c
 	$(FC) $(FCOPT) tools.f90 -c
