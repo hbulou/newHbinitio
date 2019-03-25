@@ -131,7 +131,8 @@ contains
           close(1)
           ! case 1D
        case(1)
-          write(filecube,'(a,i0,a)') 'evec',i,'.dat'
+          write(filecube,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/evec',i,'.dat'
+!          write(filecube,'(a,i0,a)') 'evec',i,'.dat'
           open(unit=1,file=filecube,form='formatted',status='unknown')
           do j=1,mesh%nactive
              write(1,*) j*mesh%dx,V(j,i)

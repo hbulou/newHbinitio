@@ -5,6 +5,7 @@ module param_mod
   use poten
   use davidson_mod
   use tools
+  use tdse_mod
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -31,7 +32,7 @@ contains
     double precision::r0,sig,Intens
 
     double precision, external :: ddot
-    
+
     select case (field(1))
     case("box_radius >") 
        read(field(2),*) param%box%radius
@@ -138,16 +139,20 @@ contains
              end if
              print *, "# creating a molecule -> ",nmol," molecule(s)" 
           end select ! field(3)
+          ! ----------------------------------------------------------------------
           !
           ! to compute the wavefunction with davidson
           !
+          ! ----------------------------------------------------------------------
        case ("davidson")
           call print_param(param)
           call davidson(param,molecule(nmol)%mesh,&
-                  molecule(nmol)%cvg,molecule(nmol),molecule(nmol)%pot,time_spent)    
+               molecule(nmol)%cvg,molecule(nmol),molecule(nmol)%pot,time_spent)    
+          ! ----------------------------------------------------------------------
           !
           ! to operation
           !
+          ! ----------------------------------------------------------------------
        case ("operation")
           print *,"nfield=",nfield
           allocate(junk_wfc(molecule(nmol)%mesh%nactive))
@@ -179,6 +184,9 @@ contains
           allocate(junk_wfc(molecule(nmol)%mesh%nactive))
           tdse_wfc=0.0
           junk_wfc=0.0
+          !
+          ! - 1 - building the wave packets
+          !
           r0=20.
           sig=2.0
           Intens=1.0
@@ -190,58 +198,75 @@ contains
              write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
           end do
           close(10)
+          !
+          ! - 2 - projecting the wave packet onto the eigenstates of the potential
+          !
           allocate(coeff(param%nvec_to_cvg))
           do  idxwfc=1,param%nvec_to_cvg
              coeff(idxwfc)=-molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
                   junk_wfc,1,&
                   molecule(nmol)%wf%wfc(:,idxwfc),1)
              call daxpy(molecule(nmol)%mesh%nactive,&
-                coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
-                junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
+                  coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+                  junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
              norm=sqrt(molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
                   junk_wfc,1,&
                   junk_wfc,1))
 
              print *,"(coeff,norm)=",coeff(idxwfc),norm
           end do
-          
+          !
+          ! saving the residual
+          !
           open(unit=10,file="tdse1.dat",form='formatted')
           do i=1,molecule(nmol)%mesh%nactive
              write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
           end do
           close(10)
-          
+          !
+          ! - 3 - building the new wave packet from the projection coefficients
+          !
           junk_wfc=0.0
           do  idxwfc=1,param%nvec_to_cvg
              call daxpy(molecule(nmol)%mesh%nactive,&
                   -coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
                   junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
           end do
-          
+
           open(unit=10,file="tdse2.dat",form='formatted')
           do i=1,molecule(nmol)%mesh%nactive
              write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
           end do
           close(10)
-          
-           !      print *,'Starting TDSE scheme'
-           !      call tdse(molecule,molecule%cvg,param)
+          !
+          ! - 4 - propagation of the wave packet
+          !
+          tdse_wfc=cmplx(junk_wfc,0.0)
+          open(unit=10,file="tdse3.dat",form='formatted')
+          do i=1,molecule(nmol)%mesh%nactive
+             write(10,*) i*molecule(nmol)%mesh%dx,dreal(tdse_wfc(i)),dimag(tdse_wfc(i))
+          end do
+          close(10)
+          print *,'Starting TDSE scheme'
+          call tdse(molecule(nmol),molecule(nmol)%cvg,param,tdse_wfc)
 
 
-           
-           deallocate(coeff)
-           deallocate(tdse_wfc)
+
+          deallocate(coeff)
+          deallocate(tdse_wfc)
+          ! ----------------------------------------------------------------------
           !
           ! to get info
           !
+          ! ----------------------------------------------------------------------
        case ("info")
           call print_param(param)
           print *,nmol," molecule(s)"
        end select  ! field(2)
-          !
-          !
-          !
-       end select
+       !
+       !
+       !
+    end select
   end subroutine parse_line
   ! --------------------------------------------------------------------------------------
   !
@@ -254,7 +279,7 @@ contains
     integer::nmol
     type(t_molecule),allocatable:: molecule(:)
     type(t_time) :: time_spent   
-      
+
     character (len=1024)::line,redline
     character (len=1024)::line2
     character (len=32)::field(32)
@@ -278,7 +303,7 @@ contains
 
     call exit()
     read(*,*)  
-   end subroutine read_param
+  end subroutine read_param
   ! --------------------------------------------------------------------------------------
   !
   !              init_param()
@@ -330,74 +355,74 @@ contains
   !
   ! --------------------------------------------------------------------------------------
 
-     subroutine print_param(param)
-      implicit none
-      integer::i
-      type(t_param)::param
-      print *,'#filenrj=',trim(param%filenrj)
-      print *,'#restart=',param%restart
-      print *,'#scheme=',trim(param%scheme)
-      print *,'#init_wf=',param%init_wf
-      print *,'#extrapol=',param%extrapol
-      print *,'#extrap_add=',param%extrap_add
-      print *,'#loopmax=',param%loopmax
-      print *,'#nvecmin=',param%nvecmin
-      print *,'#nvecmax=',param%nvecmax
-      print *,'#ETA=',param%ETA
-      print *,'#nvec_to_cvg=',param%nvec_to_cvg
-      print *,"#occupation= ",(param%occupation(i),i=1,param%nvec_to_cvg)
-      print *,'#Zato=',param%Z
-      print *,'#lorb=',param%lorb
-      print *,'#hartree=',param%hartree
-      print *,'#exchange=',param%exchange
-      print *,'#box_width=',param%box%width
-      print *,'#box_radius=',param%box%radius
-      print *,'#box_shape=',param%box%shape
-      print *,'#box_center=[',param%box%center(1),',',param%box%center(2),',',param%box%center(3),']'
-      print *,'#Nx=',param%nx
-      print *,'#noccstate=',param%noccstate
-      print *,'#dh=',param%box%width/(param%Nx+1)
-      print *,'#Dimension of the mesh=',param%dim
-      print *,'#Perturbation shape=',param%perturb%shape
-      print *,'#Magnitude of the perturbation=',param%perturb%Intensity
-      print *,'#Spread of the perturbation=',param%perturb%sigma
-      print *,'#Perturbation location=[',param%perturb%location(1),',',param%perturb%location(2),',',param%perturb%location(3),']'
-    end subroutine print_param
- ! --------------------------------------------------------------------------------------
+  subroutine print_param(param)
+    implicit none
+    integer::i
+    type(t_param)::param
+    print *,'#filenrj=',trim(param%filenrj)
+    print *,'#restart=',param%restart
+    print *,'#scheme=',trim(param%scheme)
+    print *,'#init_wf=',param%init_wf
+    print *,'#extrapol=',param%extrapol
+    print *,'#extrap_add=',param%extrap_add
+    print *,'#loopmax=',param%loopmax
+    print *,'#nvecmin=',param%nvecmin
+    print *,'#nvecmax=',param%nvecmax
+    print *,'#ETA=',param%ETA
+    print *,'#nvec_to_cvg=',param%nvec_to_cvg
+    print *,"#occupation= ",(param%occupation(i),i=1,param%nvec_to_cvg)
+    print *,'#Zato=',param%Z
+    print *,'#lorb=',param%lorb
+    print *,'#hartree=',param%hartree
+    print *,'#exchange=',param%exchange
+    print *,'#box_width=',param%box%width
+    print *,'#box_radius=',param%box%radius
+    print *,'#box_shape=',param%box%shape
+    print *,'#box_center=[',param%box%center(1),',',param%box%center(2),',',param%box%center(3),']'
+    print *,'#Nx=',param%nx
+    print *,'#noccstate=',param%noccstate
+    print *,'#dh=',param%box%width/(param%Nx+1)
+    print *,'#Dimension of the mesh=',param%dim
+    print *,'#Perturbation shape=',param%perturb%shape
+    print *,'#Magnitude of the perturbation=',param%perturb%Intensity
+    print *,'#Spread of the perturbation=',param%perturb%sigma
+    print *,'#Perturbation location=[',param%perturb%location(1),',',param%perturb%location(2),',',param%perturb%location(3),']'
+  end subroutine print_param
+  ! --------------------------------------------------------------------------------------
   !
   !              line_parser()
   !
   ! --------------------------------------------------------------------------------------
 
-      subroutine line_parser(line,nfield,field)
-        implicit none
-        character (len=1024)::line,redline
-        character (len=32)::field(32)
-        integer::eqidx,lline,nfield,debidx,endidx,i
-        eqidx=index(line,"=")
-        nfield=1
-        field(nfield)=line(1:eqidx-1)//' >'
-        nfield=nfield+1
-        redline=line(eqidx+1:)
-        lline=len_trim(redline)
-        if(lline.gt.0) then
-           !nfield=1
-           !print *,lline,trim(redline)
-           debidx=1
-           do i=1,len(trim(redline))
-              !print *,redline(i:i)
-              if(redline(i:i).eq.' ') then
-                 endidx=i-1
-                 field(nfield)=trim(redline(debidx:endidx))
-                 !print *,'                 >>>>',debidx,endidx,redline(debidx:endidx)
-                 debidx=endidx+1
-                 nfield=nfield+1
-              end if
-              field(nfield)=trim(redline(debidx:))
-           end do
-        end if
-      end subroutine line_parser
-    ! --------------------------------------------------------------------------------------
+  subroutine line_parser(line,nfield,field)
+    implicit none
+    character (len=1024)::line,redline
+    character (len=32)::field(32)
+    integer::eqidx,lline,nfield,debidx,endidx,i
+    eqidx=index(line,"=")
+    nfield=1
+    field(nfield)=line(1:eqidx-1)//' >'
+    nfield=nfield+1
+    redline=line(eqidx+1:)
+    lline=len_trim(redline)
+    if(lline.gt.0) then
+       !nfield=1
+       !print *,lline,trim(redline)
+       debidx=1
+       do i=1,len(trim(redline))
+          !print *,redline(i:i)
+          if(redline(i:i).eq.' ') then
+             endidx=i-1
+             field(nfield)=trim(redline(debidx:endidx))
+             !print *,'                 >>>>',debidx,endidx,redline(debidx:endidx)
+             debidx=endidx+1
+             nfield=nfield+1
+          end if
+          field(nfield)=trim(redline(debidx:))
+       end do
+    end if
+  end subroutine line_parser
+  ! --------------------------------------------------------------------------------------
   !
   !             new_molecule()
   !
@@ -412,11 +437,9 @@ contains
 
     print *," Starting new_molecule()"
 
-
-
-if(param%dim.lt.3) param%box%center(3)=0.0
+    if(param%dim.lt.3) param%box%center(3)=0.0
     if(param%dim.lt.2) param%box%center(2)=0.0
-    
+
     print *,'#prefix=',param%prefix
     call system("mkdir "//param%prefix)
     write(param%filenameeigen,'(a,a)') param%prefix(:len_trim(param%prefix)),'/eigenvalues.dat'
@@ -435,10 +458,10 @@ if(param%dim.lt.3) param%box%center(3)=0.0
     end if
     open(unit=1,file=param%filenrj,form='formatted',status='unknown') ;close(1)
 
-    
+
     call new_mesh(molecule%mesh,param)
     call init_pot(molecule%mesh,molecule%pot)
-    call save_potential(param,molecule%mesh,molecule)
+    call save_potential(param,molecule)
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
     allocate(molecule%wf%eps(molecule%wf%nwfc))
     allocate(molecule%wf%epsprev(molecule%wf%nwfc))
@@ -459,10 +482,10 @@ if(param%dim.lt.3) param%box%center(3)=0.0
     end do
 
 
-    
+
     print *,"End of new_molecule()"
   end subroutine new_molecule
 
-    
+
 
 end module param_mod

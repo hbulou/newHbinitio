@@ -17,12 +17,12 @@ all: Hbinitio.f90
 	$(FC) $(FCOPT) tools.f90 -c
 	$(FC) $(FCOPT) IO.f90 -c
 	$(FC) $(FCOPT) davidson.f90 -c
+	$(FC) $(FCOPT) tdse_mod.f90 -c
 	$(FC) $(FCOPT) param.f90 -c
 	$(FC) $(FCOPT) ConjugateGradient.f90 -c
 	$(FC) $(FCOPT) numerov2.f90 -c
 	$(FC) $(FCOPT) pseudopotential.f90 -c
 	$(FC) $(FCOPT) operation.f90 -c
-	$(FC) $(FCOPT) tdse_mod.f90 -c
 	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack	
 
 clean:

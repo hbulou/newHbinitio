@@ -83,7 +83,7 @@ contains
        mesh%node(i)%n_bound=0
     end do
 
-    call set_nodes(mesh)
+    call set_nodes(mesh,param)
     ! 2*mesh%dim=2  @1D
     ! 2*mesh%dim=4  @2D
     ! 2*mesh%dim=6  @3D
@@ -117,11 +117,14 @@ contains
   ! set_idx_list(mesh)
   !
   ! -----------------------------------------------
-  subroutine set_nodes(mesh)
+  subroutine set_nodes(mesh,param)
     type(t_mesh)::mesh
     integer::i,j,k
     double precision::d,x,y,z
     logical::CompDomain
+    character (len=1024) :: filename
+    type(t_param)::param
+    
     print *," Starting set_nodes()"
     allocate(mesh%ijk_to_idx(mesh%Nx,mesh%Ny,mesh%Nz))
     mesh%nactive=0
@@ -196,8 +199,8 @@ contains
        !    end if
        
 
-    
-    open(unit=1,file='domain.xyz',form='formatted',status='unknown')
+       write(filename,'(a,a)') param%prefix(:len_trim(param%prefix)),'/domain.xyz'
+    open(unit=1,file=filename,form='formatted',status='unknown')
     write(1,*) mesh%Ntot
     write(1,*)
     do k=1,mesh%Nz
