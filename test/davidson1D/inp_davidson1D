@@ -28,9 +28,11 @@ exchange .FALSE.
 # command part
 #
 molecule new
-set molecule 1
-end
+set molecule 1 N 1000 1 1
 davidson molecule 1
+set molecule 1 N 1500 1 1
+davidson molecule 1
+end
 tdse  molecule 1
 end
 set 1  N

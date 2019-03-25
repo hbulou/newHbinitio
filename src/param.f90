@@ -111,21 +111,19 @@ contains
        !
        ! --------------------------------------------------------------
     case("set")
-       select case (trim(field(2)))
-       case("molecule")
-          print *,"----------------------------------"
-          print *,"     NEW  MOLECULE                "
-          print *,"----------------------------------"
-          
-          idxmol=1
-          if(nfield.lt.1) then
-             do i=2,nfield
-                if(field(i).eq."molecule") read(field(i+1),*) idxmol
-             end do
-          end if
-          
-          print *, "# Changing molecule  ",idxmol
-       end select
+       idxmol=1
+       if(nfield.gt.1) then
+          do i=2,nfield
+             select case (trim(field(i)))
+             case("molecule")
+                read(field(i+1),*) idxmol
+              case("N")
+                 read(field(i+1),*) param%Nx
+             end select
+          end do
+       end if
+       call new_molecule(molecule(idxmol),param)
+       print *, "# Changing molecule  ",idxmol
     case("molecule") 
        select case (trim(field(2)))
        case("new")
@@ -492,19 +490,26 @@ contains
     call init_pot(molecule%mesh,molecule%pot)
     call save_potential(param,molecule)
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
+    if(allocated(molecule%wf%eps))     deallocate(molecule%wf%eps)
     allocate(molecule%wf%eps(molecule%wf%nwfc))
+    if(allocated(molecule%wf%epsprev))     deallocate(molecule%wf%epsprev)
     allocate(molecule%wf%epsprev(molecule%wf%nwfc))
+    if(allocated(molecule%wf%deps))     deallocate(molecule%wf%deps)
     allocate(molecule%wf%deps(molecule%wf%nwfc))
+    if(allocated(molecule%wf%wfc))     deallocate(molecule%wf%wfc)
     allocate(molecule%wf%wfc(molecule%mesh%nactive,molecule%wf%nwfc))
+    if(allocated(molecule%rho))     deallocate(molecule%rho)
     allocate(molecule%rho(molecule%mesh%nactive))
 
     molecule%cvg%nwfc=param%nvecmin
+    if(allocated(molecule%cvg%wfc))     deallocate(molecule%cvg%wfc)
     allocate(molecule%cvg%wfc(molecule%cvg%nwfc))
     do i=1,molecule%cvg%nwfc
        molecule%cvg%wfc%cvg=.FALSE.
     end do
     molecule%cvg%nvec_to_cvg=param%nvec_to_cvg
     molecule%cvg%ETA=param%ETA
+    if(allocated(molecule%cvg%list_idx))     deallocate(molecule%cvg%list_idx)
     allocate(molecule%cvg%list_idx(param%nvec_to_cvg))
     do i=1,param%nvec_to_cvg
        molecule%cvg%list_idx(i)=param%list_idx_to_cvg(i)

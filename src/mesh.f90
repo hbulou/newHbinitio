@@ -73,6 +73,7 @@ contains
     
     mesh%Ntot=mesh%Nx*mesh%Ny*mesh%Nz ! total number of nodes (active + unactive)
     !    allocate(mesh%n_neighbors(mesh%N))
+    if(allocated(mesh%node)) deallocate(mesh%node)
     allocate(mesh%node(mesh%Ntot))
     do i=1,mesh%Ntot
        allocate(mesh%node(i)%list_neighbors(2*mesh%dim)) !
@@ -93,10 +94,12 @@ contains
     ! n_bound -> number of inactive neighbors of a point
     ! default = 0
     ! max = 3 (corner)
+    if(allocated(mesh%n_bound))     deallocate(mesh%n_bound)
     allocate(mesh%n_bound(mesh%Ntot))
     mesh%n_bound(:)=0
     ! list_bound -> idx of the inactive neighbors. It corresponds to
     !                       bound(:)
+    if(allocated(mesh%list_bound))      deallocate(mesh%list_bound) !
     allocate(mesh%list_bound(mesh%Ntot,3)) !
     mesh%list_bound(:,:)=0
     ! number of element in the boundary surface
@@ -107,6 +110,7 @@ contains
     mesh%nbound=         2*(mesh%Nx*mesh%Ny+mesh%Nx*mesh%Nz+&
          mesh%Ny*mesh%Nz)
     print *,'new_mesh > nbound=',mesh%nbound
+    if(allocated(mesh%bound))     deallocate(mesh%bound)
     allocate(mesh%bound(mesh%nbound))
 
 
@@ -126,6 +130,7 @@ contains
     type(t_param)::param
     
     print *," Starting set_nodes()"
+    if(allocated(mesh%ijk_to_idx))     deallocate(mesh%ijk_to_idx)
     allocate(mesh%ijk_to_idx(mesh%Nx,mesh%Ny,mesh%Nz))
     mesh%nactive=0
     mesh%nunactive=mesh%Ntot+1

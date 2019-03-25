@@ -13,14 +13,18 @@ contains
     type(t_mesh)::mesh
     type(t_potential)::pot
 
-
+    if(allocated(pot%ext))     deallocate(pot%ext)
     allocate(pot%ext(mesh%Ntot))
+    if(allocated(pot%hartree))     deallocate(pot%hartree)
     allocate(pot%hartree(mesh%Ntot))
+    if(allocated(pot%Vx))     deallocate(pot%Vx)
     allocate(pot%Vx(mesh%Ntot))
     pot%hartree=0.0
     pot%Vx=0.0
+    if(allocated(pot%perturb))     deallocate(pot%perturb)
     allocate(pot%perturb(mesh%Ntot))
     pot%perturb=0.0
+    if(allocated(pot%tot))     deallocate(pot%tot)
     allocate(pot%tot(mesh%Ntot))
     call Vext2(mesh,pot%ext)
     call Vperturb(mesh,pot)
