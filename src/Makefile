@@ -23,7 +23,7 @@ all: Hbinitio.f90
 	$(FC) $(FCOPT) numerov2.f90 -c
 	$(FC) $(FCOPT) pseudopotential.f90 -c
 	$(FC) $(FCOPT) operation.f90 -c
-	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack	
+	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack 
 
 clean:
 	rm *.mod *.o 

@@ -118,11 +118,17 @@ contains
              case("molecule")
                 read(field(i+1),*) idxmol
               case("N")
-                 read(field(i+1),*) param%Nx
-             end select
+                 read(field(i+1),*) molecule(idxmol)%param%Nx
+              case("radius")
+                 read(field(i+1),*) molecule(idxmol)%param%box%radius
+              case("nloopmax")
+                 read(field(i+1),*) molecule(idxmol)%param%loopmax
+              end select
           end do
        end if
-       call new_molecule(molecule(idxmol),param)
+       !call init_param_molecule(molecule(idxmol),param)
+       call new_molecule(molecule(idxmol),molecule(idxmol)%param)
+       !call new_molecule(molecule(idxmol),param)
        print *, "# Changing molecule  ",idxmol
     case("molecule") 
        select case (trim(field(2)))
@@ -136,7 +142,11 @@ contains
           if(.not.(allocated(molecule))) then
              nmol=1
              allocate(molecule(nmol))
-            call new_molecule(molecule(nmol),param)
+             call init_param_molecule(molecule(nmol),param)
+             call new_molecule(molecule(nmol),molecule(nmol)%param)
+             call print_param(molecule(nmol)%param)
+             call print_param(param)
+             !call exit()
           else
              print *,"Not yet implemented"
              call exit()
@@ -149,7 +159,7 @@ contains
        end select
     case ("davidson")
        print *,"----------------------------------"
-       print *,"          DAVIDSON"
+       print *,"          DAVIDSON            "
        print *,"----------------------------------"
        idxmol=1
        if(nfield.lt.1) then
@@ -158,13 +168,14 @@ contains
           end do
        end if
        print *,nfield
-       call print_param(param)
-       call davidson(param,molecule(idxmol)%mesh,&
+       !call exit()
+       call davidson(molecule(idxmol)%param,molecule(idxmol)%mesh,&
             molecule(idxmol)%cvg,molecule(idxmol),molecule(idxmol)%pot,time_spent)    
+    
     case("tdse")
-       print *,"-------------------------------------------------------"
+       print *,"---------------------------------------------------------------"
        print *,"          Time-Dependent Schrodinger Equation"
-       print *,"-------------------------------------------------------"
+       print *,"---------------------------------------------------------------"
        allocate(tdse_wfc(molecule(nmol)%mesh%nactive))
           allocate(junk_wfc(molecule(nmol)%mesh%nactive))
           tdse_wfc=0.0
@@ -371,7 +382,7 @@ contains
     param%ETA=1.0e-3
     param%dim=1
     param%box%width=pi/sqrt(2.0)
-    param%box%radius=param%box%width
+    param%box%radius=.5*param%box%width
     param%box%shape='cube'
     param%box%center(1)=0.5
     param%box%center(2)=0.5
@@ -388,6 +399,51 @@ contains
     param%Z=1.0
     param%lorb=0
   end subroutine init_param
+
+
+  subroutine init_param_molecule(molecule,param)
+    implicit none
+    type(t_param)::param
+    type(t_molecule):: molecule
+    double precision,parameter::pi=4.0*atan(1.0)
+    molecule%param%ieof=    param%ieof
+    molecule%param%loopmax=param%loopmax
+    molecule%param%prefix=param%prefix
+    molecule%param%scheme=param%scheme
+    molecule%param%restart=param%restart
+    molecule%param%init_wf=param%init_wf
+    molecule%param%extrapol=    param%extrapol
+    molecule%param%extrap_add=    param%extrap_add
+    molecule%param%nvecmin=    param%nvecmin
+    molecule%param%nvecmax=    param%nvecmax
+    molecule%param%Nx=    param%Nx
+    molecule%param%noccstate=    param%noccstate
+    molecule%param%nvec_to_cvg=    param%nvec_to_cvg
+    if(allocated(molecule%param%list_idx_to_cvg)) deallocate(molecule%param%list_idx_to_cvg)
+    allocate(molecule%param%list_idx_to_cvg(molecule%param%nvec_to_cvg))
+    if(    allocated(molecule%param%occupation)) deallocate(molecule%param%occupation)
+    allocate(molecule%param%occupation(molecule%param%nvec_to_cvg))
+    molecule%param%list_idx_to_cvg(1)=param%list_idx_to_cvg(1)
+    molecule%param%ETA=    param%ETA
+    molecule%param%dim=param%dim
+    molecule%param%box%width=    param%box%width
+    molecule%param%box%radius=molecule%param%box%width
+    molecule%param%box%shape=    param%box%shape
+    molecule%param%box%center(1)=    param%box%center(1)
+    molecule%param%box%center(2)=    param%box%center(2)
+    molecule%param%box%center(3)=    param%box%center(3)
+    molecule%param%perturb%Intensity=    param%perturb%Intensity
+    molecule%param%perturb%sigma =   param%perturb%sigma
+    molecule%param%perturb%Intensity=    param%perturb%Intensity
+    molecule%param%perturb%location(1)=    param%perturb%location(1)
+    molecule%param%perturb%location(2)=    param%perturb%location(2)
+    molecule%param%perturb%location(3)=    param%perturb%location(3)
+    molecule%param%perturb%shape=    param%perturb%shape
+    molecule%param%hartree=    param%hartree
+    molecule%param%exchange=    param%exchange
+    molecule%param%Z=    param%Z
+    molecule%param%lorb=    param%lorb
+  end subroutine init_param_molecule
   ! --------------------------------------------------------------------------------------
   !
   !              print_param()
@@ -398,6 +454,9 @@ contains
     implicit none
     integer::i
     type(t_param)::param
+    print *,'----------------------------------------------------------------------------------'
+    print *,'                     Parametrization (begin)'  
+    print *,'----------------------------------------------------------------------------------'
     print *,'#filenrj=',trim(param%filenrj)
     print *,'#restart=',param%restart
     print *,'#scheme=',trim(param%scheme)
@@ -426,6 +485,10 @@ contains
     print *,'#Magnitude of the perturbation=',param%perturb%Intensity
     print *,'#Spread of the perturbation=',param%perturb%sigma
     print *,'#Perturbation location=[',param%perturb%location(1),',',param%perturb%location(2),',',param%perturb%location(3),']'
+    print *,'----------------------------------------------------------------------------------'
+    print *,'                     Parametrization (end)'
+    print *,'----------------------------------------------------------------------------------'
+
   end subroutine print_param
   ! --------------------------------------------------------------------------------------
   !

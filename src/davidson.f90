@@ -211,9 +211,9 @@ contains
        if(cvg%wfc(i)%cvg) cvg%ncvg=cvg%ncvg+1
     end do
     do i=1,cvg%nwfc
-       write(*,'(A,I3,A,F12.6,A,E12.2,A)',advance='no') 'Main > Eigenvalue(',i,'): ',cvg%wfc(i)%nrj,'(',cvg%wfc(i)%dnrj,')'
+       write(*,'(A,I3,A,F12.6,A,E12.2,A)',advance='no') 'Main > Eig. val.(',i,'): ',cvg%wfc(i)%nrj,'(',cvg%wfc(i)%dnrj,')'
        write(*,'(A,I3,A,E12.4,A,E10.2)',advance='no') ' | r(',i,')= ',cvg%wfc(i)%resi,'/',cvg%ETA
-       write(*,'(L2,I2)') cvg%wfc(i)%cvg,cvg%ncvg
+       write(*,'(L2,I2,A,I2)') cvg%wfc(i)%cvg,cvg%ncvg,'/',cvg%nvec_to_cvg
 !       if(cvg%wfc(i)%cvg) then
 !          write(*,*) ' -> cvg'
 !       else

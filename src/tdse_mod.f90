@@ -70,7 +70,7 @@ contains
 !         end if
 
 
-      call exit()
+!      call exit()
       !      end do
       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
@@ -185,14 +185,16 @@ contains
          close(1)
          
          if(mod(time_loop,1000).eq.0) then
-            write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
-            print *,"saving ",trim(filename)
-            open(unit=1,file=filename,form='formatted',status='unknown')
-            do i=1,molecule%mesh%nactive-1
-               write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
-            end do
-            close(1)
-            !call  save_agr(idxmov)
+
+            ! write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
+            ! print *,"saving ",trim(filename)
+            ! open(unit=1,file=filename,form='formatted',status='unknown')
+            ! do i=1,molecule%mesh%nactive-1
+            !    write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
+            ! end do
+            ! close(1)
+
+            call  save_agr(idxmov)
          end if
          
          itmp=oldt ; oldt=newt ; newt=itmp

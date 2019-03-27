@@ -227,6 +227,7 @@ contains
     end do
     close(1)
     print *,"# set_nodes > total number of nodes (active + unactive)" ,mesh%Ntot
+    print *,"# set_nodes > radius=",param%box%radius
     print *,"# set_nodes > ",mesh%nactive," actives nodes"
     print *,"# set_nodes > ",mesh%Ntot-mesh%nunactive+1," unactives nodes"
     
