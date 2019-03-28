@@ -11,7 +11,7 @@ Nx 1000
 noccstate 1
 nvec_to_cvg 12
 occupation 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ETA 1.0e-8
+ETA 1.0e-5
 box_width 60.0
 box_radius 20.0
 box_shape cylinder
@@ -28,9 +28,10 @@ exchange .FALSE.
 # command part
 #
 molecule new
-set molecule 1 N 1500 1 1
-set molecule 1 radius 20.0
+set molecule 1 N 2200 1 1
+set molecule 1 radius 40.0
 set molecule 1 nloopmax 2000
+set molecule 1 width 120
 davidson molecule 1
 #set molecule 1 N 1500 1 1
 #davidson molecule 1

@@ -123,6 +123,8 @@ contains
                  read(field(i+1),*) molecule(idxmol)%param%box%radius
               case("nloopmax")
                  read(field(i+1),*) molecule(idxmol)%param%loopmax
+              case("width")
+                 read(field(i+1),*) molecule(idxmol)%param%box%width
               end select
           end do
        end if
