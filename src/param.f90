@@ -22,7 +22,7 @@ contains
     type(t_molecule),allocatable:: molecule(:)
     type(t_molecule),allocatable:: junk(:) 
     type(t_time) :: time_spent   
-    integer::i,nfield,ifield,idxwfc,idxmol
+    integer::i,nfield,ifield,idxwfc,idxmol,j
 
     double precision,allocatable::junk_wfc(:)
     double complex,allocatable::tdse_wfc(:)
@@ -185,7 +185,7 @@ contains
           !
           ! - 1 - building the wave packets
           !
-          r0=20.
+          r0=40.
           sig=2.0
           Intens=1.0
           do i=1,molecule(nmol)%mesh%nactive
@@ -193,7 +193,9 @@ contains
           end do
           open(unit=10,file="tdse.dat",form='formatted')
           do i=1,molecule(nmol)%mesh%nactive
-             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+             write(10,*) i*molecule(nmol)%mesh%dx,molecule(nmol)%pot%ext(i),&
+                  junk_wfc(i),&
+                  (molecule(nmol)%wf%wfc(i,j),j=1,param%nvec_to_cvg)
           end do
           close(10)
           !
