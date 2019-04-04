@@ -29,8 +29,8 @@ contains
     write(1,*) 's4 LINEWIDTH 4.0'
     write(1,*) 'READ BLOCK "pot_ext.dat"'
     write(1,*) 'BLOCK xy "1:2"'
-    write(1,*) 'WORLD YMIN -1.0'
-    write(1,*) 'WORLD YMAX 1.0'
+    write(1,*) 'WORLD YMIN -.4'
+    write(1,*) 'WORLD YMAX .4'
     if(idxmov.le.9) then
        write(filename,'(A,I1,A)') 'PRINT TO "output0000',idxmov,'.png"'
     else        if(idxmov.le.99) then

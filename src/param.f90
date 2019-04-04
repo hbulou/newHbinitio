@@ -27,7 +27,7 @@ contains
     double precision,allocatable::junk_wfc(:)
     double complex,allocatable::tdse_wfc(:)
     double precision,allocatable::coeff(:)
-    double precision::norm
+    double precision::norm,k0
 
     double precision::r0,sig,Intens
 
@@ -179,81 +179,87 @@ contains
        print *,"          Time-Dependent Schrodinger Equation"
        print *,"---------------------------------------------------------------"
        allocate(tdse_wfc(molecule(nmol)%mesh%nactive))
-          allocate(junk_wfc(molecule(nmol)%mesh%nactive))
-          tdse_wfc=0.0
-          junk_wfc=0.0
-          !
-          ! - 1 - building the wave packets
-          !
-          r0=40.
-          sig=2.0
-          Intens=1.0
-          do i=1,molecule(nmol)%mesh%nactive
-             junk_wfc(i)=gauss(i*molecule(nmol)%mesh%dx,r0,sig,Intens)
-          end do
-          open(unit=10,file="tdse.dat",form='formatted')
-          do i=1,molecule(nmol)%mesh%nactive
-             write(10,*) i*molecule(nmol)%mesh%dx,molecule(nmol)%pot%ext(i),&
-                  junk_wfc(i),&
-                  (molecule(nmol)%wf%wfc(i,j),j=1,param%nvec_to_cvg)
-          end do
-          close(10)
-          !
-          ! - 2 - projecting the wave packet onto the eigenstates of the potential
-          !
-          allocate(coeff(param%nvec_to_cvg))
-          do  idxwfc=1,param%nvec_to_cvg
-             coeff(idxwfc)=-molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
-                  junk_wfc,1,&
-                  molecule(nmol)%wf%wfc(:,idxwfc),1)
-             call daxpy(molecule(nmol)%mesh%nactive,&
-                  coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
-                  junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
-             norm=sqrt(molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
-                  junk_wfc,1,&
-                  junk_wfc,1))
+       allocate(junk_wfc(molecule(nmol)%mesh%nactive))
+       tdse_wfc=0.0
+       junk_wfc=0.0
+       !
+       ! - 1 - building the wave packets
+       !
+       r0=20.
+       sig=1.0
+       Intens=1.0
 
-             print *,"(coeff,norm)=",coeff(idxwfc),norm
-          end do
-          !
-          ! saving the residual
-          !
-          open(unit=10,file="tdse1.dat",form='formatted')
-          do i=1,molecule(nmol)%mesh%nactive
-             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
-          end do
-          close(10)
-          !
-          ! - 3 - building the new wave packet from the projection coefficients
-          !
-          junk_wfc=0.0
-          do  idxwfc=1,param%nvec_to_cvg
-             call daxpy(molecule(nmol)%mesh%nactive,&
-                  -coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
-                  junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
-          end do
-
-          open(unit=10,file="tdse2.dat",form='formatted')
-          do i=1,molecule(nmol)%mesh%nactive
-             write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
-          end do
-          close(10)
-          !
-          ! - 4 - propagation of the wave packet
-          !
-          tdse_wfc=cmplx(junk_wfc,0.0)
-          open(unit=10,file="tdse3.dat",form='formatted')
-          do i=1,molecule(nmol)%mesh%nactive
-             write(10,*) i*molecule(nmol)%mesh%dx,dreal(tdse_wfc(i)),dimag(tdse_wfc(i))
-          end do
-          close(10)
-          print *,'Starting TDSE scheme'
-          call tdse(molecule(nmol),molecule(nmol)%cvg,param,tdse_wfc)
+       call wave_packet(r0,sig,Intens,molecule(nmol),junk_wfc)
 
 
+       ! open(unit=10,file="tdse.dat",form='formatted')
+       ! do i=1,molecule(nmol)%mesh%nactive
+       !    write(10,*) i*molecule(nmol)%mesh%dx,molecule(nmol)%pot%ext(i),&
+       !         junk_wfc(i),&
+       !         (molecule(nmol)%wf%wfc(i,j),j=1,param%nvec_to_cvg)
+       ! end do
+       ! close(10)
+       ! !
+       ! ! - 2 - projecting the wave packet onto the eigenstates of the potential
+       ! !
+       ! allocate(coeff(param%nvec_to_cvg))
+       ! do  idxwfc=1,param%nvec_to_cvg
+       !    coeff(idxwfc)=-molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
+       !         junk_wfc,1,&
+       !         molecule(nmol)%wf%wfc(:,idxwfc),1)
+       !    call daxpy(molecule(nmol)%mesh%nactive,&
+       !         coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+       !         junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
+       !    norm=sqrt(molecule(nmol)%mesh%dx*ddot(molecule(nmol)%mesh%nactive,&
+       !         junk_wfc,1,&
+       !         junk_wfc,1))
+          
+       !    print *,"(coeff,norm)=",coeff(idxwfc),norm
+       ! end do
+       ! !
+       ! ! saving the residual
+       ! !
+       ! open(unit=10,file="tdse1.dat",form='formatted')
+       ! do i=1,molecule(nmol)%mesh%nactive
+       !    write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+       ! end do
+       ! close(10)
+       ! !
+       ! ! - 3 - building the new wave packet from the projection coefficients
+       ! !
+       ! junk_wfc=0.0
+       ! do  idxwfc=1,param%nvec_to_cvg
+       !    call daxpy(molecule(nmol)%mesh%nactive,&
+       !         -coeff(idxwfc),molecule(nmol)%wf%wfc(:,idxwfc),1,&
+       !         junk_wfc,1)  ! tdse_wfc+coeff*wfc(idxwfc) -> tdse_wfc
+       ! end do
+       
+       ! open(unit=10,file="tdse2.dat",form='formatted')
+       ! do i=1,molecule(nmol)%mesh%nactive
+       !    write(10,*) i*molecule(nmol)%mesh%dx,junk_wfc(i)
+       ! end do
+       ! close(10)
+       !
+       ! - 4 - propagation of the wave packet
+       !
 
-          deallocate(coeff)
-          deallocate(tdse_wfc)
+       k0=2*PI/1.0
+       do i=1,molecule(nmol)%mesh%nactive
+          tdse_wfc(i)=cmplx(junk_wfc(i)*cos(k0*i*molecule(nmol)%mesh%dx),&
+               junk_wfc(i)*sin(k0*i*molecule(nmol)%mesh%dx))
+       end do
+       open(unit=10,file="tdse3.dat",form='formatted')
+       do i=1,molecule(nmol)%mesh%nactive
+          write(10,*) i*molecule(nmol)%mesh%dx,dreal(tdse_wfc(i)),dimag(tdse_wfc(i))
+       end do
+       close(10)
+       print *,'Starting TDSE scheme'
+       call tdse(molecule(nmol),molecule(nmol)%cvg,param,tdse_wfc)
+       
+       
+       
+       deallocate(coeff)
+       deallocate(tdse_wfc)
     case("end")
        end_loop=.TRUE.
        
@@ -319,6 +325,21 @@ contains
        !
     end select
   end subroutine parse_line
+  ! --------------------------------------------------------------------------------------
+  !
+  !              wave_packet()
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine wave_packet(r0,sig,Intens,molecule,wp)
+    implicit none
+    double precision::r0,sig,Intens
+    type(t_molecule):: molecule
+    double precision::wp(:)
+    integer :: i
+    do i=1,molecule%mesh%nactive
+       wp(i)=gauss(i*molecule%mesh%dx,r0,sig,Intens)
+    end do
+  end subroutine wave_packet
   ! --------------------------------------------------------------------------------------
   !
   !              read_param()

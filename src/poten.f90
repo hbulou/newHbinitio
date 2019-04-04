@@ -153,7 +153,8 @@ contains
        do nn=1,m%nactive
           pts(1)=m%node(nn)%q(1)
           rsqr=(pts(1)-m%box%center(1))**2
-          pot_ext(nn)=.5*0.01*rsqr
+          pot_ext(nn)=.5*1.0*rsqr*0
+!          pot_ext(nn)=.5*0.01*rsqr
        end do
     else
        print *,' STOP in Vext(): dimension=',m%dim,' not yet implemented!'

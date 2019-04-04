@@ -184,7 +184,7 @@ contains
          end do
          close(1)
          
-         if(mod(time_loop,5000).eq.0) then
+         if(mod(time_loop,1000).eq.0) then
 
             ! write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
             ! print *,"saving ",trim(filename)
