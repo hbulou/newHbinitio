@@ -32,13 +32,21 @@ contains
     write(1,*) 'WORLD YMIN -.4'
     write(1,*) 'WORLD YMAX .4'
     if(idxmov.le.9) then
-       write(filename,'(A,I1,A)') 'PRINT TO "output0000',idxmov,'.png"'
+       write(filename,'(A,I1,A)') 'PRINT TO "output00000000',idxmov,'.png"'
     else        if(idxmov.le.99) then
-       write(filename,'(A,I2,A)') 'PRINT TO "output000',idxmov,'.png"'
+       write(filename,'(A,I2,A)') 'PRINT TO "output0000000',idxmov,'.png"'
     else        if(idxmov.le.999) then
-       write(filename,'(A,I3,A)') 'PRINT TO "output00',idxmov,'.png"'
-    else        if(idxmov.le.999) then
-       write(filename,'(A,I5,A)') 'PRINT TO "output0',idxmov,'.png"'
+       write(filename,'(A,I3,A)') 'PRINT TO "output000000',idxmov,'.png"'
+    else        if(idxmov.le.9999) then
+       write(filename,'(A,I4,A)') 'PRINT TO "output0000',idxmov,'.png"'
+    else        if(idxmov.le.99999) then
+       write(filename,'(A,I5,A)') 'PRINT TO "output000',idxmov,'.png"'
+    else        if(idxmov.le.999999) then
+       write(filename,'(A,I6,A)') 'PRINT TO "output00',idxmov,'.png"'
+    else        if(idxmov.le.9999999) then
+       write(filename,'(A,I7,A)') 'PRINT TO "output0',idxmov,'.png"'
+    else        if(idxmov.le.99999999) then
+       write(filename,'(A,I8,A)') 'PRINT TO "output',idxmov,'.png"'
     end if
     write(1,*) trim(filename)
     write(1,*) 'HARDCOPY DEVICE "PNG"'

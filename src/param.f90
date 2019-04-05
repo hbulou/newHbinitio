@@ -125,6 +125,10 @@ contains
                  read(field(i+1),*) molecule(idxmol)%param%loopmax
               case("width")
                  read(field(i+1),*) molecule(idxmol)%param%box%width
+              case("tdse_nstep")
+                 read(field(i+1),*) molecule(idxmol)%param%tdse%nstep
+              case("tdse_freq_save")
+                 read(field(i+1),*) molecule(idxmol)%param%tdse%freq_save
               end select
           end do
        end if
@@ -423,6 +427,8 @@ contains
     param%exchange=.FALSE.
     param%Z=1.0
     param%lorb=0
+    param%tdse%nstep=1000
+    param%tdse%freq_save=1000
   end subroutine init_param
 
 
@@ -468,6 +474,8 @@ contains
     molecule%param%exchange=    param%exchange
     molecule%param%Z=    param%Z
     molecule%param%lorb=    param%lorb
+    molecule%param%tdse%nstep=param%tdse%nstep
+    molecule%param%tdse%freq_save=param%tdse%freq_save
   end subroutine init_param_molecule
   ! --------------------------------------------------------------------------------------
   !

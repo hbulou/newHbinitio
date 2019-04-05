@@ -11,11 +11,19 @@ module global
   double precision,parameter::Ry2eV=13.6056981D0
   ! Hartree energy  (eV)
   double precision,parameter::Ha2eV=27.211396380
-  ! ------------------------------------------
+  ! --------------------------------------------------------
+  !
+  !     TIME data type
+  !
+  ! -------------------------------------------------------
   type t_time
      real :: start,end,start_loc,end_loc
   end type t_time
-  ! ------------------------------------------
+  ! --------------------------------------------------------
+  !
+  !     POTENTIAL data type
+  !
+  ! -------------------------------------------------------
   type t_potential
      double precision,allocatable :: ext(:)      ! external potential
      double precision,allocatable :: hartree(:)  ! hartreel potential
@@ -24,13 +32,26 @@ module global
      double precision,allocatable :: tot(:)      ! perturbation potential
      double precision::EX,Ehartree
   end type t_potential
-  ! ------------------------------------------
+  ! --------------------------------------------------------
+  !
+  !     BOX data type
+  !
+  ! -------------------------------------------------------
   type t_box
      character(len=32)::shape
      double precision::width
      double precision::center(3)
      double precision::radius
   end type t_box
+  ! --------------------------------------------------------
+  !
+  !     TDSE data type
+  !
+  ! -------------------------------------------------------
+  type t_tdse
+     integer::nstep       ! number of time propagation steps
+     integer::freq_save   ! frequency for saving the TDWF
+  end type t_tdse
   ! --------------------------------------------------------
   !
   !     PERTURBATION data type
@@ -75,6 +96,7 @@ module global
      logical::exchange
      double precision::Z
      integer :: lorb
+     type (t_tdse)::tdse
   end type t_param
   !------------------------------------------
   type t_nrj

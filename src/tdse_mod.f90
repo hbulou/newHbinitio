@@ -111,7 +111,7 @@ contains
       !
       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       idxmov=1
-      do time_loop=1,10000000
+      do time_loop=1,molecule%param%tdse%nstep
          ! !!!!!!!!!!!!!!!!!!!!!!!!!!
          !
          ! Omega calculation
@@ -184,7 +184,7 @@ contains
          end do
          close(1)
          
-         if(mod(time_loop,1000).eq.0) then
+         if(mod(time_loop,molecule%param%tdse%freq_save).eq.0) then
 
             ! write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
             ! print *,"saving ",trim(filename)
