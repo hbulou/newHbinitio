@@ -111,7 +111,7 @@ contains
       !
       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       idxmov=1
-      do time_loop=1,1000000
+      do time_loop=1,10000000
          ! !!!!!!!!!!!!!!!!!!!!!!!!!!
          !
          ! Omega calculation

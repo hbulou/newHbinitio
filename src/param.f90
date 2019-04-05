@@ -192,13 +192,13 @@ contains
        call wave_packet(r0,sig,Intens,molecule(nmol),junk_wfc)
 
 
-       ! open(unit=10,file="tdse.dat",form='formatted')
-       ! do i=1,molecule(nmol)%mesh%nactive
-       !    write(10,*) i*molecule(nmol)%mesh%dx,molecule(nmol)%pot%ext(i),&
-       !         junk_wfc(i),&
-       !         (molecule(nmol)%wf%wfc(i,j),j=1,param%nvec_to_cvg)
-       ! end do
-       ! close(10)
+        open(unit=10,file="tdse.dat",form='formatted')
+        do i=1,molecule(nmol)%mesh%nactive
+           write(10,*) i*molecule(nmol)%mesh%dx,molecule(nmol)%pot%ext(i),&
+                junk_wfc(i),&
+                (molecule(nmol)%wf%wfc(i,j),j=1,param%nvec_to_cvg)
+        end do
+        close(10)
        ! !
        ! ! - 2 - projecting the wave packet onto the eigenstates of the potential
        ! !
@@ -258,7 +258,7 @@ contains
        
        
        
-       deallocate(coeff)
+!       deallocate(coeff)
        deallocate(tdse_wfc)
     case("end")
        end_loop=.TRUE.
