@@ -5,13 +5,41 @@ module IO
 contains
   ! --------------------------------------------------------------------------------------
   !
+  !              make_filename()
+  !
+  ! --------------------------------------------------------------------------------------
+    subroutine make_filename(idx,pref,filename)
+      implicit none
+      integer::idx
+      character (len=1024) :: filename,pref
+
+      if(idx.le.9) then
+         write(filename,'(A,A,I1,A)') trim(pref),'00000000',idx,'.png'
+      else        if(idx.le.99) then
+         write(filename,'(A,A,I2,A)') trim(pref),'0000000',idx,'.png'
+      else        if(idx.le.999) then
+         write(filename,'(A,A,I3,A)') trim(pref),'000000',idx,'.png'
+      else        if(idx.le.9999) then
+         write(filename,'(A,I4,A)') trim(pref),'0000',idx,'.png'
+      else        if(idx.le.99999) then
+         write(filename,'(A,A,I5,A)') trim(pref),'000',idx,'.png'
+      else        if(idx.le.999999) then
+         write(filename,'(A,A,I6,A)') trim(pref),'00',idx,'.png'
+      else        if(idx.le.9999999) then
+         write(filename,'(A,A,I7,A)') trim(pref),'0',idx,'.png'
+      else        if(idx.le.99999999) then
+         write(filename,'(A,A,I8,A)') trim(pref),'',idx,'.png'
+      end if
+    end subroutine make_filename
+  ! --------------------------------------------------------------------------------------
+  !
   !              SAVE_CUBE()
   !
   ! --------------------------------------------------------------------------------------
   subroutine save_agr(idxmov)
     implicit none
     integer::idxmov
-    character (len=1024) :: filename
+    character (len=1024) :: filename,pref
 
     open(unit=1,file="plot_wfc.bfile",form='formatted',status='unknown')
     write(1,*) 'READ BLOCK "tdse.dat"'
@@ -31,24 +59,15 @@ contains
     write(1,*) 'BLOCK xy "1:2"'
     write(1,*) 'WORLD YMIN -.4'
     write(1,*) 'WORLD YMAX .4'
-    if(idxmov.le.9) then
-       write(filename,'(A,I1,A)') 'PRINT TO "output00000000',idxmov,'.png"'
-    else        if(idxmov.le.99) then
-       write(filename,'(A,I2,A)') 'PRINT TO "output0000000',idxmov,'.png"'
-    else        if(idxmov.le.999) then
-       write(filename,'(A,I3,A)') 'PRINT TO "output000000',idxmov,'.png"'
-    else        if(idxmov.le.9999) then
-       write(filename,'(A,I4,A)') 'PRINT TO "output0000',idxmov,'.png"'
-    else        if(idxmov.le.99999) then
-       write(filename,'(A,I5,A)') 'PRINT TO "output000',idxmov,'.png"'
-    else        if(idxmov.le.999999) then
-       write(filename,'(A,I6,A)') 'PRINT TO "output00',idxmov,'.png"'
-    else        if(idxmov.le.9999999) then
-       write(filename,'(A,I7,A)') 'PRINT TO "output0',idxmov,'.png"'
-    else        if(idxmov.le.99999999) then
-       write(filename,'(A,I8,A)') 'PRINT TO "output',idxmov,'.png"'
-    end if
-    write(1,*) trim(filename)
+
+    write(pref,'(A)') 'output'
+    call make_filename(idxmov,pref,filename)
+    
+    write(1,'(A,A,A)') 'PRINT TO "',trim(filename),'"'
+
+    !write(1,*) trim(filename)
+    !print *,filename
+    !call exit()
     write(1,*) 'HARDCOPY DEVICE "PNG"'
     write(1,*) 'PRINT'
     close(1)

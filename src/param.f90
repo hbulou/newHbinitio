@@ -252,13 +252,13 @@ contains
           tdse_wfc(i)=cmplx(junk_wfc(i)*cos(k0*i*molecule(nmol)%mesh%dx),&
                junk_wfc(i)*sin(k0*i*molecule(nmol)%mesh%dx))
        end do
-       open(unit=10,file="tdse3.dat",form='formatted')
-       do i=1,molecule(nmol)%mesh%nactive
-          write(10,*) i*molecule(nmol)%mesh%dx,dreal(tdse_wfc(i)),dimag(tdse_wfc(i))
-       end do
-       close(10)
+!       open(unit=10,file="tdse3.dat",form='formatted')
+!       do i=1,molecule(nmol)%mesh%nactive
+!          write(10,*) i*molecule(nmol)%mesh%dx,dreal(tdse_wfc(i)),dimag(tdse_wfc(i))
+!       end do
+!       close(10)
        print *,'Starting TDSE scheme'
-       call tdse(molecule(nmol),molecule(nmol)%cvg,param,tdse_wfc)
+       call tdse(molecule(nmol),param,tdse_wfc)
        
        
        

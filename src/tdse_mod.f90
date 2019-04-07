@@ -2,16 +2,18 @@ module tdse_mod
     use global
     use tools
     use IO
+    use FFT_mod
     implicit none
 contains
-    subroutine tdse(molecule,cvg,param,wfc_ini)
+    subroutine tdse(molecule,param,wfc_ini)
       implicit none
       type(t_molecule)::molecule
-      type(t_cvg)::cvg
       type(t_param)::param
       double complex,allocatable::wfc_ini(:)
       
       double complex,allocatable::wfc(:,:)
+      double complex,allocatable::in_wfc(:)
+      double complex,allocatable::fft_wfc(:)
       
       double precision::x,sigsqr,sig,k0
       double precision::dxsqr,dt,a,b,dxsqrdt,c,d,normesqr
@@ -19,14 +21,15 @@ contains
       character (len=1024) :: filename
       integer::i,oldt,newt,itmp,time_loop,idxmov
 
-      double precision::lambda,x1,epsilonx1,x0
-      
+      double precision::lambda,x1,epsilonx1,x0,dk
       
       double complex,allocatable::e(:)
       double complex,allocatable::f(:)
       double complex,allocatable::Omega(:)
 
+      dk=1.0/(molecule%mesh%nactive*molecule%mesh%dx)
 
+      
 !      double precision::a0
 !      a0=0.529
       
@@ -35,6 +38,8 @@ contains
       allocate(e(molecule%mesh%nactive))
       allocate(f(molecule%mesh%nactive))
       allocate(wfc(molecule%mesh%nactive,2))
+      allocate(fft_wfc(molecule%mesh%nactive))
+      allocate(in_wfc(molecule%mesh%nactive))
       allocate(Omega(molecule%mesh%nactive))
 
       wfc(:,oldt)=wfc_ini
@@ -59,6 +64,9 @@ contains
       end do
       close(1)
 
+
+
+      
 !      epsilonx1=0.5
 !      x1=60.0
 !      do i=1,molecule%mesh%nactive
@@ -70,7 +78,7 @@ contains
 !         end if
 
 
-!      call exit()
+      !      call exit()
       !      end do
       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
@@ -97,13 +105,12 @@ contains
          b=dimag(e(i-1))
          normesqr=a**2+b**2
          e(i)=cmplx(2+2*dxsqr*molecule%pot%tot(i)-a/normesqr,-4*dxsqrdt+b/normesqr)
-         !          print *,e(i),abs(e(i))
       end do
-      open(unit=1,file="e.dat",form='formatted',status='unknown')
-      do i=1,molecule%mesh%nactive
-         write(1,*) i*molecule%mesh%dx,dreal(e(i)),dimag(e(i)),abs(e(i))
-      end do
-      close(1)
+!      open(unit=1,file="e.dat",form='formatted',status='unknown')
+!      do i=1,molecule%mesh%nactive
+!         write(1,*) i*molecule%mesh%dx,dreal(e(i)),dimag(e(i)),abs(e(i))
+!      end do
+!      close(1)
 
       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !
@@ -117,7 +124,10 @@ contains
          ! Omega calculation
          !
          ! !!!!!!!!!!!!!!!!!!!!!!!!!
-         i=1 ;     Omega(i)=cmplx(&
+
+
+         i=1
+         Omega(i)=cmplx(&
               (2+2*dxsqr*molecule%pot%tot(i))*dreal(wfc(i,oldt))-4*dxsqrdt*dimag(wfc(i,oldt))-dreal(wfc(i+1,oldt)),&
               (2+2*dxsqr*molecule%pot%tot(i))*dimag(wfc(i,oldt))+4*dxsqrdt*dreal(wfc(i,oldt))-dimag(wfc(i+1,oldt)))
          do i=2,molecule%mesh%nactive-1
@@ -178,22 +188,35 @@ contains
             h=dimag(wfc(i+1,newt))
             wfc(i,newt)=cmplx((a*(g-c)+b*(h-d))/normesqr,(a*(h-d)-b*(g-c))/normesqr)
          end do
-         open(unit=1,file="wfc.dat",form='formatted',status='unknown')
-         do i=1,molecule%mesh%nactive-1
-            write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
-         end do
-         close(1)
+
+
          
          if(mod(time_loop,molecule%param%tdse%freq_save).eq.0) then
 
-            ! write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
-            ! print *,"saving ",trim(filename)
-            ! open(unit=1,file=filename,form='formatted',status='unknown')
-            ! do i=1,molecule%mesh%nactive-1
-            !    write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
-            ! end do
-            ! close(1)
+            !write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/wfc',time_loop,'.dat'
+           ! print *,"saving ",trim(filename)
+           ! open(unit=1,file=filename,form='formatted',status='unknown')
+           ! do i=1,molecule%mesh%nactive-1
+           !    write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
+           ! end do
+           ! close(1)
 
+            in_wfc=wfc(:,newt)
+            call FFT(in_wfc,fft_wfc,molecule%mesh%nactive)
+            write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/fft_wfc',time_loop,'.dat'
+            open(unit=1,file=filename,form='formatted',status='unknown')
+            do i=1,molecule%mesh%nactive
+               write(1,*) i*dk,dreal(fft_wfc(i)),dimag(fft_wfc(i)),abs(fft_wfc(i))
+            end do
+            close(1)
+            
+
+            
+            open(unit=1,file="wfc.dat",form='formatted',status='unknown')
+            do i=1,molecule%mesh%nactive-1
+               write(1,*) i*molecule%mesh%dx,dreal(wfc(i,newt)),dimag(wfc(i,newt)),abs(wfc(i,newt))
+            end do
+            close(1)
             call  save_agr(idxmov)
          end if
          

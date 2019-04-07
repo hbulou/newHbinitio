@@ -5,6 +5,8 @@ install:
 	mkdir -p bin ; cd src ; make install
 clean:
 	cd src ; make clean
+clean_test:
+	cd test/davidson1D ; rm *.png ./davidson1D/*
 dav1d:
 	cd test/davidson1D ; ../../bin/$(EXEC) inp_davidson1D
 doc: Hbinitio.pdf

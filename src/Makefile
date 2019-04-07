@@ -4,13 +4,14 @@ INC=
 FC=gfortran
 FCPARA=mpif90
 FCOPT= -fimplicit-none -finit-local-zero  -fopenmp -finit-local-zero # -Wunused -Wall -Wargument-mismatch -Wimplicit-interface
-SRC=global.f90  param.f90 tools.f90 IO.f90 poten.f90  numerov2.f90  mesh.f90 davidson.f90   time_tracking.f90 ConjugateGradient.f90 tdse_mod.f90 operation.f90 Hbinitio.f90 
+SRC=global.f90  FFT.f90 param.f90 tools.f90 IO.f90 poten.f90  numerov2.f90  mesh.f90 davidson.f90   time_tracking.f90 ConjugateGradient.f90 tdse_mod.f90 operation.f90 Hbinitio.f90 
 
 EXEC=Hbinitio.x
-OBJ=time_tracking.o global.o poten.o  IO.o param.o   mesh.o tools.o davidson.o ConjugateGradient.o numerov2.o  pseudopotential.o operation.o tdse_mod.o  
+OBJ=time_tracking.o global.o FFT.o poten.o  IO.o param.o   mesh.o tools.o davidson.o ConjugateGradient.o numerov2.o  pseudopotential.o operation.o tdse_mod.o  
 
 all: Hbinitio.f90 
 	$(FC) $(FCOPT) global.f90 -c
+	$(FC) -I/usr/include $(FCOPT) FFT.f90 -c	
 	$(FC) $(FCOPT) time_tracking.f90 -c
 	$(FC) $(FCOPT) poten.f90 -c
 	$(FC) $(FCOPT) mesh.f90 -c
@@ -23,7 +24,7 @@ all: Hbinitio.f90
 	$(FC) $(FCOPT) numerov2.f90 -c
 	$(FC) $(FCOPT) pseudopotential.f90 -c
 	$(FC) $(FCOPT) operation.f90 -c
-	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack 
+	$(FC) $(FCOPT)  $(OBJ) Hbinitio.f90  -o $(EXEC)  -lblas -llapack -lfftw3
 
 clean:
 	rm *.mod *.o 
