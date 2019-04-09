@@ -16,17 +16,19 @@ contains
       double complex,allocatable::fft_wfc(:)
       
       double precision::x,sigsqr,sig,k0
-      double precision::dxsqr,dt,a,b,dxsqrdt,c,d,normesqr
+      double precision::dxsqr,dt,dxsqrdt,c,d,normesqr
+      double precision::a,b,aa,bb
       double precision::g,h
       character (len=1024) :: filename
       integer::i,oldt,newt,itmp,time_loop,idxmov
 
       double precision::lambda,x1,epsilonx1,x0,dk
-      
+      double precision,allocatable::mu(:)
       double complex,allocatable::e(:)
       double complex,allocatable::f(:)
       double complex,allocatable::Omega(:)
 
+      
       dk=1.0/(molecule%mesh%nactive*molecule%mesh%dx)
 
       
@@ -41,6 +43,7 @@ contains
       allocate(fft_wfc(molecule%mesh%nactive))
       allocate(in_wfc(molecule%mesh%nactive))
       allocate(Omega(molecule%mesh%nactive))
+      allocate(mu(molecule%mesh%nactive))
 
       wfc(:,oldt)=wfc_ini
       
@@ -82,7 +85,10 @@ contains
       !      end do
       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
-         write(1,*) i*molecule%mesh%dx,molecule%pot%tot(i)
+         mu(i)=0.0
+         if(i*molecule%mesh%dx.ge.25) mu(i)=1.0*(i*molecule%mesh%dx-25)
+         !         mu(i)=1.0/(molecule%mesh%nactive*molecule%mesh%dx-(i-1)*molecule%mesh%dx)
+         write(1,*) i*molecule%mesh%dx,molecule%pot%tot(i),mu(i)
       end do
       close(1)
 
@@ -99,12 +105,16 @@ contains
       ! e calculation
       !
       ! !!!!!!!!!!!!!!!!!!!!!
-      i=1 ;     e(i)=cmplx(2+2*dxsqr*molecule%pot%tot(i),-4*dxsqrdt)
+      aa=2+2*dxsqr*molecule%pot%tot(i)
+      bb=-4*dxsqrdt-2*dxsqr*mu(i)
+      i=1 ;     e(i)=cmplx(aa,bb)
       do i=2,molecule%mesh%nactive-1
          a=dreal(e(i-1))
          b=dimag(e(i-1))
          normesqr=a**2+b**2
-         e(i)=cmplx(2+2*dxsqr*molecule%pot%tot(i)-a/normesqr,-4*dxsqrdt+b/normesqr)
+         aa=2+2*dxsqr*molecule%pot%tot(i)-a/normesqr
+         bb=b/normesqr-4*dxsqrdt-dxsqr*mu(i)
+         e(i)=cmplx(aa,bb)
       end do
 !      open(unit=1,file="e.dat",form='formatted',status='unknown')
 !      do i=1,molecule%mesh%nactive
@@ -128,13 +138,15 @@ contains
 
          i=1
          Omega(i)=cmplx(&
-              (2+2*dxsqr*molecule%pot%tot(i))*dreal(wfc(i,oldt))-4*dxsqrdt*dimag(wfc(i,oldt))-dreal(wfc(i+1,oldt)),&
-              (2+2*dxsqr*molecule%pot%tot(i))*dimag(wfc(i,oldt))+4*dxsqrdt*dreal(wfc(i,oldt))-dimag(wfc(i+1,oldt)))
+              (2+2*dxsqr*molecule%pot%tot(i))*dreal(wfc(i,oldt))+(2*dxsqr*mu(i)-4*dxsqrdt)*dimag(wfc(i,oldt))-dreal(wfc(i+1,oldt)),&
+              (2+2*dxsqr*molecule%pot%tot(i))*dimag(wfc(i,oldt))+(4*dxsqrdt-2*dxsqr*mu(i))*dreal(wfc(i,oldt))-dimag(wfc(i+1,oldt)))
          do i=2,molecule%mesh%nactive-1
             Omega(i)=cmplx(&
-                 (2+2*dxsqr*molecule%pot%tot(i))*dreal(wfc(i,oldt))-4*dxsqrdt*dimag(wfc(i,oldt))-dreal(wfc(i+1,oldt))&
+                 (2+2*dxsqr*molecule%pot%tot(i))*dreal(wfc(i,oldt))+(2*dxsqr*mu(i)-4*dxsqrdt)*dimag(wfc(i,oldt))&
+                 -dreal(wfc(i+1,oldt))&
                  -dreal(wfc(i-1,oldt)),&
-                 (2+2*dxsqr*molecule%pot%tot(i))*dimag(wfc(i,oldt))+4*dxsqrdt*dreal(wfc(i,oldt))-dimag(wfc(i+1,oldt))&
+                 (2+2*dxsqr*molecule%pot%tot(i))*dimag(wfc(i,oldt))+(4*dxsqrdt-2*dxsqr*mu(i))*dreal(wfc(i,oldt))&
+                 -dimag(wfc(i+1,oldt))&
                  -dimag(wfc(i-1,oldt)))
          end do
          
@@ -203,9 +215,13 @@ contains
 
             in_wfc=wfc(:,newt)
             call FFT(in_wfc,fft_wfc,molecule%mesh%nactive)
-            write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/fft_wfc',time_loop,'.dat'
-            open(unit=1,file=filename,form='formatted',status='unknown')
-            do i=1,molecule%mesh%nactive
+!            write(filename,'(a,a,i0,a)') param%prefix(:len_trim(param%prefix)),'/fft_wfc',time_loop,'.dat'
+!            open(unit=1,file=filename,form='formatted',status='unknown')
+            open(unit=1,file="fft.dat",form='formatted',status='unknown')
+            do i=molecule%mesh%nactive/2+1,molecule%mesh%nactive
+               write(1,*) (i-molecule%mesh%nactive-1)*dk,dreal(fft_wfc(i)),dimag(fft_wfc(i)),abs(fft_wfc(i))
+            end do
+            do i=1,molecule%mesh%nactive/2
                write(1,*) i*dk,dreal(fft_wfc(i)),dimag(fft_wfc(i)),abs(fft_wfc(i))
             end do
             close(1)

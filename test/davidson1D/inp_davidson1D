@@ -29,15 +29,15 @@ exchange .FALSE.
 #
 molecule new
 set molecule 1 N 500 1 1
-set molecule 1 radius 15.0
+set molecule 1 radius 20.0
 set molecule 1 nloopmax 2000
-set molecule 1 width 40
+set molecule 1 width 50
 davidson molecule 1
 #set molecule 1 N 1500 1 1
 #davidson molecule 1
 #end
-set molecule 1 tdse_nstep 10000000
-set molecule 1 tdse_freq_save 1000
+set molecule 1 tdse_nstep      1000000
+set molecule 1 tdse_freq_save     1000
 tdse  molecule 1
 end
 set 1  N

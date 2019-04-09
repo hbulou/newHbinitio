@@ -5,6 +5,7 @@ module param_mod
   use poten
   use davidson_mod
   use tools
+  use FFT_mod
   use tdse_mod
   implicit none
 contains
@@ -27,12 +28,14 @@ contains
     double precision,allocatable::junk_wfc(:)
     double complex,allocatable::tdse_wfc(:)
     double precision,allocatable::coeff(:)
-    double precision::norm,k0
+    double precision::norm,k0,dk
 
     double precision::r0,sig,Intens
 
     double precision, external :: ddot
-
+    character (len=1024) :: filename
+    double complex,allocatable::in_wfc(:)
+    double complex,allocatable::fft_wfc(:)
 
     select case (trim(field(1)))
     case("box_radius") 
@@ -177,7 +180,32 @@ contains
        !call exit()
        call davidson(molecule(idxmol)%param,molecule(idxmol)%mesh,&
             molecule(idxmol)%cvg,molecule(idxmol),molecule(idxmol)%pot,time_spent)    
-    
+
+
+
+       allocate(fft_wfc(molecule(idxmol)%mesh%nactive))
+       allocate(in_wfc(molecule(idxmol)%mesh%nactive))
+       do j=1,5
+          do i=1,molecule(idxmol)%mesh%nactive
+             in_wfc(i)=cmplx(molecule(idxmol)%wf%wfc(i,j),0.0)
+          end do
+          call FFT(in_wfc,fft_wfc,molecule(idxmol)%mesh%nactive)
+          
+          dk=1.0/(molecule(idxmol)%mesh%nactive*molecule(idxmol)%mesh%dx)
+          write(filename,'(a,i0,a)') 'fft',j,'.dat'
+          open(unit=1,file=filename,form='formatted',status='unknown')
+          do i=molecule(idxmol)%mesh%nactive/2+1,molecule(idxmol)%mesh%nactive
+             write(1,*) (i-molecule(idxmol)%mesh%nactive-1)*dk,dreal(fft_wfc(i)),dimag(fft_wfc(i)),abs(fft_wfc(i))
+          end do
+          do i=1,molecule(idxmol)%mesh%nactive/2
+             write(1,*) (i-1)*dk,dreal(fft_wfc(i)),dimag(fft_wfc(i)),abs(fft_wfc(i))
+          end do
+          close(1)
+       end do
+       deallocate(fft_wfc)
+       deallocate(in_wfc)
+!       call exit()
+       
     case("tdse")
        print *,"---------------------------------------------------------------"
        print *,"          Time-Dependent Schrodinger Equation"
@@ -189,7 +217,7 @@ contains
        !
        ! - 1 - building the wave packets
        !
-       r0=20.
+       r0=10.
        sig=1.0
        Intens=1.0
 

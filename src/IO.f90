@@ -14,21 +14,26 @@ contains
       character (len=1024) :: filename,pref
 
       if(idx.le.9) then
-         write(filename,'(A,A,I1,A)') trim(pref),'00000000',idx,'.png'
+         write(filename,'(A,A,I1,A)') trim(pref),'0000000000',idx,'.png'
       else        if(idx.le.99) then
-         write(filename,'(A,A,I2,A)') trim(pref),'0000000',idx,'.png'
+         write(filename,'(A,A,I2,A)') trim(pref),'000000000',idx,'.png'
       else        if(idx.le.999) then
-         write(filename,'(A,A,I3,A)') trim(pref),'000000',idx,'.png'
+         write(filename,'(A,A,I3,A)') trim(pref),'00000000',idx,'.png'
       else        if(idx.le.9999) then
-         write(filename,'(A,I4,A)') trim(pref),'0000',idx,'.png'
+         write(filename,'(A,A,I4,A)') trim(pref),'000000',idx,'.png'
       else        if(idx.le.99999) then
-         write(filename,'(A,A,I5,A)') trim(pref),'000',idx,'.png'
+         write(filename,'(A,A,I5,A)') trim(pref),'00000',idx,'.png'
       else        if(idx.le.999999) then
-         write(filename,'(A,A,I6,A)') trim(pref),'00',idx,'.png'
+         write(filename,'(A,A,I6,A)') trim(pref),'0000',idx,'.png'
       else        if(idx.le.9999999) then
-         write(filename,'(A,A,I7,A)') trim(pref),'0',idx,'.png'
+         write(filename,'(A,A,I7,A)') trim(pref),'000',idx,'.png'
       else        if(idx.le.99999999) then
-         write(filename,'(A,A,I8,A)') trim(pref),'',idx,'.png'
+         write(filename,'(A,A,I8,A)') trim(pref),'00',idx,'.png'
+      else        if(idx.le.999999999) then
+         write(filename,'(A,A,I9,A)') trim(pref),'0',idx,'.png'
+      else
+         print *,"Too large number of steps !"
+         call exit()
       end if
     end subroutine make_filename
   ! --------------------------------------------------------------------------------------
@@ -42,6 +47,9 @@ contains
     character (len=1024) :: filename,pref
 
     open(unit=1,file="plot_wfc.bfile",form='formatted',status='unknown')
+    write(1,*) 'ARRANGE (2,1,.1,.6,.6,ON,ON,ON)'
+    write(1,*) 'FOCUS G0'
+    write(1,*) 'VIEW 0.1,0.1,0.9,0.5'
     write(1,*) 'READ BLOCK "tdse.dat"'
     write(1,*) 'BLOCK xy "1:4"'
     write(1,*) 's0 LINEWIDTH 2.0'
@@ -57,9 +65,16 @@ contains
     write(1,*) 's4 LINEWIDTH 4.0'
     write(1,*) 'READ BLOCK "pot_ext.dat"'
     write(1,*) 'BLOCK xy "1:2"'
+    write(1,*) 'BLOCK xy "1:3"'
     write(1,*) 'WORLD YMIN -.4'
     write(1,*) 'WORLD YMAX .4'
+    write(1,*) 'FOCUS G1'
+    write(1,*) 'VIEW 0.1,0.6,0.9,0.9'
+    write(1,*) 'READ BLOCK "fft.dat"'
+    write(1,*) 'BLOCK xy "1:4"'
 
+
+    
     write(pref,'(A)') 'output'
     call make_filename(idxmov,pref,filename)
     
