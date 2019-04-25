@@ -30,8 +30,10 @@ contains
     double precision,allocatable::coeff(:)
     double precision::norm,k0,dk
 
-    double precision::r0,sig,Intens,x,y,z
-
+    double precision::r0,sig,Intens,x,y,z,x0,y0,z0
+    double precision::r1(4),I2(3)
+    double precision,allocatable::r2(:,:)
+    double precision::theta,phi
     double precision, external :: ddot
     character (len=1024) :: filename
     double complex,allocatable::in_wfc(:)
@@ -222,11 +224,15 @@ contains
           molecule(nmol)%rho(i)=exp(-x)
           !print *,i,x,y,z,molecule(nmol)%rho(i)
        enddo
-!       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
- !      molecule(nmol)%rho=molecule(nmol)%rho/norm
+       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
+       molecule(nmol)%rho=molecule(nmol)%rho/norm
+       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
        print *,sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
        write(filename,'(a)') 'rho.cube'
        call save_cube_3D(molecule(nmol)%rho,filename,molecule(nmol)%mesh)
+
+
+
 
        open(unit=1,file="scan.dat",form='formatted',status='unknown')
                  
@@ -238,6 +244,42 @@ contains
        end do
        close(1)
 
+       allocate(r2(molecule(nmol)%mesh%nactive,3))
+       do i=1,molecule(nmol)%mesh%nactive
+          r2(i,1)=(molecule(nmol)%mesh%node(i)%q(1)-x0)*molecule(nmol)%rho(i)
+          r2(i,2)=(molecule(nmol)%mesh%node(i)%q(2)-y0)*molecule(nmol)%rho(i)
+          r2(i,3)=(molecule(nmol)%mesh%node(i)%q(3)-z0)*molecule(nmol)%rho(i)
+       end do
+       I2(1)=sum(r2(:,1))*molecule(nmol)%mesh%dv
+       I2(2)=sum(r2(:,2))*molecule(nmol)%mesh%dv
+       I2(3)=sum(r2(:,3))*molecule(nmol)%mesh%dv       
+       print *,I2(1),I2(2),I2(3)
+
+       phi=0.0
+       open(unit=1,file="phi.dat",form='formatted',status='unknown')
+       x0=molecule(nmol)%mesh%box%center(1)
+       y0=molecule(nmol)%mesh%box%center(2)
+       z0=molecule(nmol)%mesh%box%center(3)       
+       do i=0,360
+          theta=1.0*i
+          x=molecule(nmol)%mesh%box%center(1)+0.5*molecule(nmol)%mesh%box%radius*cos(theta*pi/180.0)
+          y=molecule(nmol)%mesh%box%center(2)+0.5*molecule(nmol)%mesh%box%radius*sin(theta*pi/180.0)
+          z=molecule(nmol)%mesh%box%center(3)       
+          r1(1)=x-x0
+          r1(2)=y-y0
+          r1(3)=z-z0
+          r1(4)=sqrt(r1(1)*r1(1)+r1(2)*r1(2)+r1(3)*r1(3))
+          write(1,*) x,y,z,r1(4),norm/r1(4),(r1(1)*I2(1)+r1(2)*I2(2)+r1(3)*I2(3))/r1(4)**3,&
+               norm/r1(4)+(r1(1)*I2(1)+r1(2)*I2(2)+r1(3)*I2(3))/r1(4)**3
+
+          print *,theta*pi/180,sph_harm(0,0,theta*pi/180,phi)
+       end do
+       close(1)
+
+
+
+
+       deallocate(r2)
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"

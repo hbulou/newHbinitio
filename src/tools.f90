@@ -404,5 +404,70 @@ contains
     double precision::r,r0,sig,res,I
     res=I*exp(-0.5*((r-r0)/sig)**2)/(sqrt(2*pi)*sig)
   end function gauss
-    
+
+  ! --------------------------------------------------------------------------------------
+  !
+  !      Legendre polynomials, associated (spherical harmonics) [6.8]
+  !      From http://sciold.ui.ac.ir/~sjalali/nrf/
+  !      Compute the associated Legendre polynomial Plm(x)
+  !      l and m are integers satisfying 0 <= m <= l, while x lies in
+  !      the range -1 <= x <= 1
+  ! --------------------------------------------------------------------------------------
+  FUNCTION plgndr(l,m,x)  
+    implicit none
+    integer::l,m
+    double precision::x,plgndr
+    double precision::pmm,somx2,fact,pmmp1,pll
+    integer::i,ll
+    pmm=1.0
+    if(m>0) then
+       somx2=sqrt((1.0-x)*(1.0+x))
+       fact=1.0
+       do i=1,m
+          pmm=-pmm*fact*somx2
+          fact=fact+2
+       end do
+    end if
+    if(l.eq.m) then
+       plgndr=pmm
+    else
+       pmmp1=x*(2*m+1)*pmm
+       if(l.eq.(m+1)) then
+          plgndr=pmmp1
+       else
+          do ll=m+2,l
+             pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
+             pmm=pmmp1
+             pmmp1=pll
+          end do
+          plgndr=pll
+       end if
+    end if
+    return
+  end FUNCTION plgndr
+  ! --------------------------------------------------------------------------------------
+  !
+  ! Spherical harominc
+  !
+  ! --------------------------------------------------------------------------------------
+  function sph_harm(l,m,theta,phi)
+    implicit none
+    integer::l,m,i
+    double precision::theta,phi,fac1,fac2,fac3
+    double complex::sph_harm
+    double precision::costheta
+!    double precision,external::plgndr
+    costheta=cos(theta)
+    fac1=1.0
+    do i=2,l-m
+       fac1=fac1*i
+    end do
+    fac2=fac1
+    do i=l-m+1,l+m
+       fac2=fac2*i
+    end do
+    fac3=sqrt((2*l+1)*fac1/(4*pi*fac2))*plgndr(l,m,costheta)
+    sph_harm=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
+    return
+  end function sph_harm
 end module tools
