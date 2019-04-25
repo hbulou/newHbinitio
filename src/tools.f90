@@ -250,6 +250,68 @@ contains
   !             interpolate()
   !
   ! --------------------------------------------------------------------------------------
+  function interpolate2(x,y,z,mesh,V)
+    implicit none
+    double precision::x,y,z
+    integer :: i,j,k,n,i0,j0,k0,i1,j1,k1
+    double precision::x0,y0,z0,x1,y1,z1
+    type(t_mesh)::mesh
+    double precision::V(:)
+    integer,parameter::ndim=8
+    double precision::A(ndim,ndim),C(ndim)
+    integer::info,ipiv(ndim),l
+    double precision::interpolate2
+    
+    i0=floor(x/mesh%dx)
+    j0=floor(y/mesh%dy)
+    k0=floor(z/mesh%dz)
+
+    i1=i0+1
+    j1=j0+1
+    k1=k0+1
+    x0=i0*mesh%dx
+    y0=j0*mesh%dy
+    z0=k0*mesh%dz
+    x1=i1*mesh%dx
+    y1=j1*mesh%dy
+    z1=k1*mesh%dz
+
+    i=1;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x0*y0 ; A(i,6)=x0*z0 ; A(i,7) = y0*z0 ; A(i,8) = x0*y0*z0
+    i=2;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x1*y0 ; A(i,6)=x1*z0 ; A(i,7) = y0*z0 ; A(i,8) = x1*y0*z0
+    i=3;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x0*y1 ; A(i,6)=x0*z0 ; A(i,7) = y1*z0 ; A(i,8) = x0*y1*z0
+    i=4;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x1*y1 ; A(i,6)=x1*z0 ; A(i,7) = y1*z0 ; A(i,8) = x1*y1*z0
+    i=5;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x0*y0 ; A(i,6)=x0*z1 ; A(i,7) = y0*z1 ; A(i,8) = x0*y0*z1
+    i=6;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x1*y0 ; A(i,6)=x1*z1 ; A(i,7) = y0*z1 ; A(i,8) = x1*y0*z1
+    i=7;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x0*y1 ; A(i,6)=x0*z1 ; A(i,7) = y1*z1 ; A(i,8) = x0*y1*z1
+    i=8;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x1*y1 ; A(i,6)=x1*z1 ; A(i,7) = y1*z1 ; A(i,8) = x1*y1*z1
+
+    C=0.0
+    i=i0 ; j=j0 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(1)=V(n)
+    i=i1 ; j=j0 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(2)=V(n)
+    i=i0 ; j=j1 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(3)=V(n)
+    i=i1 ; j=j1 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(4)=V(n)
+    i=i0 ; j=j0 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(5)=V(n)
+    i=i1 ; j=j0 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(6)=V(n)
+    i=i0 ; j=j1 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(7)=V(n)
+    i=i1 ; j=j1 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(8)=V(n)
+
+    ! do i=1,8
+    !    print *,(A(i,j),j=1,8)
+    ! end do
+    ! do i=1,8
+    !    print *,C(i)
+    ! end do
+
+
+!    CALL DGETRS('N' ,  ndim ,  ndim, A , ndim , IPIV, C , ndim , INFO)
+    CALL DGESV( ndim , 1, A , ndim , IPIV, C , ndim , INFO)
+    ! print *,info
+    ! do i=1,8
+    !    print *,'C(',i,')=',C(i)
+    ! end do
+    interpolate2=C(1)+C(2)*x+C(3)*y+C(4)*z+C(5)*x*y+C(6)*x*z+C(7)*y*z+C(8)*x*y*z
+
+  end function interpolate2
   function interpolate(x,y,z,mesh,molecule,l)
     implicit none
     double precision::x,y,z

@@ -151,9 +151,9 @@ module global
   ! ----------------------------------------------------------
   type t_mesh
      integer :: Nx,Ny,Nz,Ntot,nactive,nunactive
-     integer,allocatable :: list_bound(:,:),n_bound(:)  ! list_bound is linked with bound(:) 
+     integer,allocatable :: list_bound(:,:),n_bound(:) ! list_bound is linked with bound(:) 
      double precision :: dx,dy,dz,dv
-     type(t_box)::box
+     type(t_box)::box                                  ! data type containing informations about the mesh: center, boundaries, ...
      type(t_perturbation)::perturb
      integer :: dim
      integer::nbound
@@ -162,19 +162,27 @@ module global
      type(t_ijk_to_idx),allocatable::ijk_to_idx(:,:,:)  ! from (i,j,k) -> n
      type(t_node),allocatable::node(:)
   end type t_mesh
-  !------------------------------------------
+  ! -----------------------------------------------------------
+  !
+  !   WAVEFUNCTION data type
+  !
+  ! ----------------------------------------------------------
   type t_wavefunction
      integer :: nwfc
      double precision,allocatable::wfc(:,:)
      double precision,allocatable::eps(:)
      double precision,allocatable ::epsprev(:),deps(:) ! eigenvalues
   end type t_wavefunction
-  !------------------------------------------
+  ! -----------------------------------------------------------
+  !
+  !   MOLECULE data type
+  !
+  ! ----------------------------------------------------------
   type t_molecule
-     type(t_wavefunction)::wf       ! wavefunctions of the molecule
-     type(t_mesh)::mesh               !
-     type(t_potential)::pot
-     double precision,allocatable::rho(:)
+     type(t_wavefunction)::wf             ! wavefunctions of the molecule
+     type(t_mesh)::mesh                   ! mesh of the molecule
+     type(t_potential)::pot               ! potential inside the molecule
+     double precision,allocatable::rho(:) ! density inside the molecule
      type(t_cvg) :: cvg
      type(t_param)::param
   end type t_molecule

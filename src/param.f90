@@ -30,7 +30,7 @@ contains
     double precision,allocatable::coeff(:)
     double precision::norm,k0,dk
 
-    double precision::r0,sig,Intens
+    double precision::r0,sig,Intens,x,y,z
 
     double precision, external :: ddot
     character (len=1024) :: filename
@@ -205,7 +205,34 @@ contains
        deallocate(fft_wfc)
        deallocate(in_wfc)
 !       call exit()
+    case("experiment")
+       print *,"---------------------------------------------------------------"
+       print *,"                        Experimental "
+       print *,"---------------------------------------------------------------"
+       molecule(nmol)%rho=0
+       print *,molecule(nmol)%mesh%box%center,molecule(nmol)%mesh%box%width
+       sig=0.1*molecule(nmol)%mesh%box%width
+       do i=1,molecule(nmol)%mesh%nactive
+          x=0.5*((molecule(nmol)%mesh%node(i)%q(1)-molecule(nmol)%mesh%box%center(1))/sig)**2
+          y=0.5*((molecule(nmol)%mesh%node(i)%q(2)-molecule(nmol)%mesh%box%center(2))/sig)**2
+          z=0.5*((molecule(nmol)%mesh%node(i)%q(3)-molecule(nmol)%mesh%box%center(3))/sig)**2
+          molecule(nmol)%rho(i)=exp(-x-y-z)
+          !print *,i,x,y,z,molecule(nmol)%rho(i)
+       enddo
+       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
+       molecule(nmol)%rho=molecule(nmol)%rho/norm
+       print *,sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
+       write(filename,'(a)') 'rho.cube'
+       call save_cube_3D(molecule(nmol)%rho,filename,molecule(nmol)%mesh)
+       y=molecule(nmol)%mesh%box%center(2)
+       z=molecule(nmol)%mesh%box%center(3)
+       do i=-10,10
+          x=molecule(nmol)%mesh%box%center(1)+i*molecule(nmol)%mesh%dx
+          print *,x,interpolate2(x,y,z,molecule(nmol)%mesh,molecule(nmol)%rho)
+       end do
        
+
+       call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"
        print *,"          Time-Dependent Schrodinger Equation"
