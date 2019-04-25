@@ -276,24 +276,25 @@ contains
     y1=j1*mesh%dy
     z1=k1*mesh%dz
 
-    i=1;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x0*y0 ; A(i,6)=x0*z0 ; A(i,7) = y0*z0 ; A(i,8) = x0*y0*z0
-    i=2;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x1*y0 ; A(i,6)=x1*z0 ; A(i,7) = y0*z0 ; A(i,8) = x1*y0*z0
-    i=3;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x0*y1 ; A(i,6)=x0*z0 ; A(i,7) = y1*z0 ; A(i,8) = x0*y1*z0
-    i=4;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x1*y1 ; A(i,6)=x1*z0 ; A(i,7) = y1*z0 ; A(i,8) = x1*y1*z0
-    i=5;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x0*y0 ; A(i,6)=x0*z1 ; A(i,7) = y0*z1 ; A(i,8) = x0*y0*z1
-    i=6;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x1*y0 ; A(i,6)=x1*z1 ; A(i,7) = y0*z1 ; A(i,8) = x1*y0*z1
-    i=7;     A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x0*y1 ; A(i,6)=x0*z1 ; A(i,7) = y1*z1 ; A(i,8) = x0*y1*z1
-    i=8;     A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x1*y1 ; A(i,6)=x1*z1 ; A(i,7) = y1*z1 ; A(i,8) = x1*y1*z1
+    i=1;   A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x0*y0 ; A(i,6)=x0*z0 ; A(i,7) = y0*z0 ; A(i,8) = x0*y0*z0
+    i=2;   A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z0 ; A(i,5) = x1*y0 ; A(i,6)=x1*z0 ; A(i,7) = y0*z0 ; A(i,8) = x1*y0*z0
+    i=3;   A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x0*y1 ; A(i,6)=x0*z0 ; A(i,7) = y1*z0 ; A(i,8) = x0*y1*z0
+    i=4;   A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z0 ; A(i,5) = x1*y1 ; A(i,6)=x1*z0 ; A(i,7) = y1*z0 ; A(i,8) = x1*y1*z0
+    i=5;   A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x0*y0 ; A(i,6)=x0*z1 ; A(i,7) = y0*z1 ; A(i,8) = x0*y0*z1
+    i=6;   A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y0 ; A(i,4)=z1 ; A(i,5) = x1*y0 ; A(i,6)=x1*z1 ; A(i,7) = y0*z1 ; A(i,8) = x1*y0*z1
+    i=7;   A(i,1)=1.0 ; A(i,2)=x0 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x0*y1 ; A(i,6)=x0*z1 ; A(i,7) = y1*z1 ; A(i,8) = x0*y1*z1
+    i=8;   A(i,1)=1.0 ; A(i,2)=x1 ; A(i,3) = y1 ; A(i,4)=z1 ; A(i,5) = x1*y1 ; A(i,6)=x1*z1 ; A(i,7) = y1*z1 ; A(i,8) = x1*y1*z1
 
+    
     C=0.0
-    i=i0 ; j=j0 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(1)=V(n)
-    i=i1 ; j=j0 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(2)=V(n)
-    i=i0 ; j=j1 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(3)=V(n)
-    i=i1 ; j=j1 ; k=k0 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(4)=V(n)
-    i=i0 ; j=j0 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(5)=V(n)
-    i=i1 ; j=j0 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(6)=V(n)
-    i=i0 ; j=j1 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(7)=V(n)
-    i=i1 ; j=j1 ; k=k1 ;     n=j+(i-1)*mesh%Ny+(k-1)*mesh%Ny*mesh%Nx;    if(n.le.mesh%nactive) C(8)=V(n)
+    i=i0 ; j=j0 ; k=k0 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(1)=V(n)
+    i=i1 ; j=j0 ; k=k0 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(2)=V(n)
+    i=i0 ; j=j1 ; k=k0 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(3)=V(n)
+    i=i1 ; j=j1 ; k=k0 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(4)=V(n)
+    i=i0 ; j=j0 ; k=k1 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(5)=V(n)
+    i=i1 ; j=j0 ; k=k1 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(6)=V(n)
+    i=i0 ; j=j1 ; k=k1 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(7)=V(n)
+    i=i1 ; j=j1 ; k=k1 ;   n=mesh%ijk_to_idx(i,j,k)%n;    if(n.le.mesh%nactive) C(8)=V(n)
 
     ! do i=1,8
     !    print *,(A(i,j),j=1,8)

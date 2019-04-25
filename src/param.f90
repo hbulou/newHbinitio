@@ -211,26 +211,32 @@ contains
        print *,"---------------------------------------------------------------"
        molecule(nmol)%rho=0
        print *,molecule(nmol)%mesh%box%center,molecule(nmol)%mesh%box%width
-       sig=0.1*molecule(nmol)%mesh%box%width
+       print *,molecule(nmol)%mesh%dx
+       sig=0.05*molecule(nmol)%mesh%box%width
        do i=1,molecule(nmol)%mesh%nactive
-          x=0.5*((molecule(nmol)%mesh%node(i)%q(1)-molecule(nmol)%mesh%box%center(1))/sig)**2
-          y=0.5*((molecule(nmol)%mesh%node(i)%q(2)-molecule(nmol)%mesh%box%center(2))/sig)**2
-          z=0.5*((molecule(nmol)%mesh%node(i)%q(3)-molecule(nmol)%mesh%box%center(3))/sig)**2
-          molecule(nmol)%rho(i)=exp(-x-y-z)
+          x=0.5*(&
+               (molecule(nmol)%mesh%node(i)%q(1)-molecule(nmol)%mesh%box%center(1))**2+&
+               (molecule(nmol)%mesh%node(i)%q(2)-molecule(nmol)%mesh%box%center(2))**2+&
+               (molecule(nmol)%mesh%node(i)%q(3)-molecule(nmol)%mesh%box%center(3))**2&
+          )/sig**2
+          molecule(nmol)%rho(i)=exp(-x)
           !print *,i,x,y,z,molecule(nmol)%rho(i)
        enddo
-       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
-       molecule(nmol)%rho=molecule(nmol)%rho/norm
+!       norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
+ !      molecule(nmol)%rho=molecule(nmol)%rho/norm
        print *,sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
        write(filename,'(a)') 'rho.cube'
        call save_cube_3D(molecule(nmol)%rho,filename,molecule(nmol)%mesh)
+
+       open(unit=1,file="scan.dat",form='formatted',status='unknown')
+                 
        y=molecule(nmol)%mesh%box%center(2)
        z=molecule(nmol)%mesh%box%center(3)
        do i=-10,10
-          x=molecule(nmol)%mesh%box%center(1)+i*molecule(nmol)%mesh%dx
-          print *,x,interpolate2(x,y,z,molecule(nmol)%mesh,molecule(nmol)%rho)
+          x=molecule(nmol)%mesh%box%center(1)+(i)*molecule(nmol)%mesh%dx
+          write(1,*) x,interpolate2(x,y,z,molecule(nmol)%mesh,molecule(nmol)%rho)
        end do
-       
+       close(1)
 
        call exit()
     case("tdse")

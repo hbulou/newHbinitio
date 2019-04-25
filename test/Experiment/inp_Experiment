@@ -28,7 +28,7 @@ exchange .FALSE.
 # command part
 #
 molecule new
-set molecule 1 N 20 10 10
+set molecule 1 N 49 49 49
 set molecule 1 radius 20.0
 set molecule 1 nloopmax 2000
 set molecule 1 width 50

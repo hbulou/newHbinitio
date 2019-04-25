@@ -136,11 +136,11 @@ contains
     mesh%nunactive=mesh%Ntot+1
     !    if((mesh%dim.eq.3).or.(mesh%dim.eq.2)) then   ! 3D
     do k=1,mesh%Nz
-       z=(k-1)*mesh%dz
+       z=k*mesh%dz
        do i=1,mesh%Nx
-          x=(i-1)*mesh%dx
+          x=i*mesh%dx
           do j=1,mesh%Ny
-             y=(j-1)*mesh%dy
+             y=j*mesh%dy
              CompDomain=.FALSE.
              select case (mesh%box%shape)
              case ("sphere")
