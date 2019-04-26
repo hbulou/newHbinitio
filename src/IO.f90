@@ -110,18 +110,18 @@ contains
     open(unit=1,file=filename,form='formatted',status='unknown')
     write(1,*) ' Cubefile created from Hbinitio.f90 calculation'
     write(1,*) ' H. Bulou, November 2018'
-    write(1,FMT1) 1,0.0,0.0,0.0
+    write(1,FMT1) 1,-.5*m%box%center(1),-.5*m%box%center(2),-.5*m%box%center(3)
     write(1,FMT1) m%Nx,m%dx,0.0,0.0
     write(1,FMT1) m%Ny,0.0,m%dy,0.0
     write(1,FMT1) m%Nz,0.0,0.0,m%dz
-    write(1,'(I5,4F12.6)') 1,1.0,0.0,0.0,0.0
+    write(1,'(I5,4F12.6)') 1,1.0,-.5*m%box%center(1),-.5*m%box%center(2),-.5*m%box%center(3)
     do k=1,m%Nz
        ifield=0
        do i=1,m%Nx
           do j=1,m%Ny
              nn=m%ijk_to_idx(i,j,k)%n
-             val=0.0
-             if(m%node(nn)%active) val=data(nn)
+             val=data(nn)
+             !if(m%node(nn)%unactive) val=0.0
              write(1,'(E13.5)',advance='no') val
              ifield=ifield+1
              if (mod(ifield,6).eq.0) then

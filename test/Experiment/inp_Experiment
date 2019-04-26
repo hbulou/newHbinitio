@@ -29,6 +29,7 @@ exchange .FALSE.
 #
 molecule new
 set molecule 1 N 49 49 49
+#set molecule 1 N 4 4 4
 set molecule 1 radius 20.0
 set molecule 1 nloopmax 2000
 set molecule 1 width 50

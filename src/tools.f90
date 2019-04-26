@@ -1,7 +1,8 @@
 module tools
   use global
   use mesh_mod
-!  use param_mod
+
+  !  use param_mod
  
   implicit none
   !------------------------------------------
@@ -419,13 +420,19 @@ contains
     double precision::x,plgndr
     double precision::pmm,somx2,fact,pmmp1,pll
     integer::i,ll
+
+    if((m.lt.0).or.(m.gt.l).or.(abs(x).gt.1.0)) then
+       print *,"### ERROR in plgndr"
+       call exit()
+    end if
+
     pmm=1.0
-    if(m>0) then
+    if(m.gt.0) then
        somx2=sqrt((1.0-x)*(1.0+x))
        fact=1.0
        do i=1,m
           pmm=-pmm*fact*somx2
-          fact=fact+2
+          fact=fact+2.0
        end do
     end if
     if(l.eq.m) then
@@ -445,18 +452,41 @@ contains
     end if
     return
   end FUNCTION plgndr
+
+
+  function calc_theta(x,y,z)
+    implicit none
+    double precision::x,y,z,calc_theta
+    calc_theta=atan(sqrt(x*x+y*y)/z);
+    if(z.lt.0)calc_theta=pi+calc_theta
+        if((x.eq.0.0).and.(y.eq.0.0).and.(z.eq.0.0)) calc_theta=0.0
+    return
+  end function calc_theta
+  
+  function calc_phi(x,y)
+    implicit none
+    double precision::x,y,calc_phi
+    calc_phi=atan(y/x);
+    if((x.lt.0.0).and.(y.gt.0.0)) calc_phi=pi+calc_phi
+    if((x.lt.0.0).and.(y.lt.0.0)) calc_phi=pi+calc_phi
+    if((x.gt.0.0).and.(y.lt.0.0)) calc_phi=2*pi+calc_phi
+    if((x.eq.0.0).and.(y.eq.0.0)) calc_phi=0.0
+    return
+  end function calc_phi
   ! --------------------------------------------------------------------------------------
   !
   ! Spherical harominc
   !
   ! --------------------------------------------------------------------------------------
-  function sph_harm(l,m,theta,phi)
+  function sph_harm(l,morig,theta,phi)
     implicit none
-    integer::l,m,i
+    integer::l,m,i,morig
     double precision::theta,phi,fac1,fac2,fac3
     double complex::sph_harm
     double precision::costheta
-!    double precision,external::plgndr
+
+    m=abs(morig)
+    !    double precision,external::plgndr
     costheta=cos(theta)
     fac1=1.0
     do i=2,l-m
@@ -467,7 +497,14 @@ contains
        fac2=fac2*i
     end do
     fac3=sqrt((2*l+1)*fac1/(4*pi*fac2))*plgndr(l,m,costheta)
-    sph_harm=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
+
+    if(morig.gt.0) then
+       fac3=fac3*(-1)**m
+       sph_harm=cmplx(fac3*cos(m*phi),-fac3*sin(m*phi))
+    else
+       sph_harm=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
+    end if
     return
   end function sph_harm
+
 end module tools

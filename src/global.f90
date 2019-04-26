@@ -160,7 +160,7 @@ module global
      integer::n_usefull_unactive
      type(t_point),allocatable::bound(:)
      type(t_ijk_to_idx),allocatable::ijk_to_idx(:,:,:)  ! from (i,j,k) -> n
-     type(t_node),allocatable::node(:)
+     type(t_node),allocatable::node(:)                 ! the data_type contains ALL nodes 
   end type t_mesh
   ! -----------------------------------------------------------
   !
