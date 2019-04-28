@@ -133,7 +133,22 @@ module global
      double precision::q(3)
      logical::active
   end type t_ijk_to_idx
+
+  type t_sph_harm_m
+     double complex,allocatable::val(:)  ! for each node and l,  m
+  end type t_sph_harm_m
+  type t_sph_harm_l
+     type(t_sph_harm_m),allocatable::m(:)  ! for each node and l,  m
+  end type t_sph_harm_l
   !------------------------------------------
+  type t_rs
+     double precision,allocatable::val(:)                   ! Ntot nodes
+  end type t_rs
+  type t_multipole
+     integer::lmax,mmax
+     type(t_sph_harm_l),allocatable::sph_harm_l(:)  ! l
+     type(t_rs),allocatable::rs(:)                   ! l
+  end type t_multipole
   type t_node
      integer::n_neighbors
      integer,allocatable::list_neighbors(:)
@@ -143,6 +158,9 @@ module global
      logical::active
      integer::i,j,k
      double precision::q(3)
+     double precision::r
+     double precision::phi
+     double precision::theta
   end type t_node
   ! -----------------------------------------------------------
   !
@@ -161,6 +179,7 @@ module global
      type(t_point),allocatable::bound(:)
      type(t_ijk_to_idx),allocatable::ijk_to_idx(:,:,:)  ! from (i,j,k) -> n
      type(t_node),allocatable::node(:)                 ! the data_type contains ALL nodes 
+     type(t_multipole)::multipole
   end type t_mesh
   ! -----------------------------------------------------------
   !

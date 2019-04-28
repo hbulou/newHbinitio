@@ -11,7 +11,7 @@ contains
     implicit none
     type(t_mesh)::mesh
     type(t_param)::param
-    integer::i
+    integer::i,j
     mesh%dim=param%dim
     mesh%box%width=param%box%width
     mesh%box%shape=param%box%shape
@@ -75,6 +75,22 @@ contains
     !    allocate(mesh%n_neighbors(mesh%N))
     if(allocated(mesh%node)) deallocate(mesh%node)
     allocate(mesh%node(mesh%Ntot))
+
+    mesh%multipole%lmax=2
+    mesh%multipole%mmax=(mesh%multipole%lmax+1)**2
+
+    if(allocated(mesh%multipole%rs)) deallocate(mesh%multipole%rs)
+    allocate(mesh%multipole%rs(mesh%multipole%lmax+1))
+
+    if(allocated(mesh%multipole%sph_harm_l)) deallocate(mesh%multipole%sph_harm_l)
+    allocate(mesh%multipole%sph_harm_l(mesh%multipole%lmax+1))
+    do i=0,mesh%multipole%lmax
+       allocate(mesh%multipole%rs(i+1)%val(mesh%Ntot))
+       allocate(mesh%multipole%sph_harm_l(i+1)%m(2*i+1))
+       do j=0,2*i
+          allocate(mesh%multipole%sph_harm_l(i+1)%m(j+1)%val(mesh%Ntot))
+       end do
+    end do
     do i=1,mesh%Ntot
        allocate(mesh%node(i)%list_neighbors(2*mesh%dim)) !
        mesh%node(i)%list_neighbors(:)=0
@@ -115,6 +131,7 @@ contains
 
 
     call compute_list_neighbors(mesh)
+    call cart2sph(mesh)
   end subroutine new_mesh
   ! -----------------------------------------------
   !
@@ -444,5 +461,145 @@ contains
   !             (m%bound(idx)%q(3)-m%box%center(3))**2)
   !        idx=idx+1
   !      end subroutine update_bound
+
+
+
+  ! -----------------------------------------------
+  !
+  !        cart2sph(mesh)
+  !
+  ! -----------------------------------------------
+  subroutine cart2sph(mesh)
+    implicit none
+    type(t_mesh)::mesh
+    double precision::x,y,z,r,theta,phi
+    integer::i,l,m
+    do i=1,mesh%Ntot
+       x=mesh%node(i)%q(1)-mesh%box%center(1)
+       y=mesh%node(i)%q(2)-mesh%box%center(2)
+       z=mesh%node(i)%q(3)-mesh%box%center(3)
+       r=sqrt(x*x+y*y+z*z)
+       mesh%node(i)%r=r
+       theta=calc_theta(x,y,z)
+       phi=calc_phi(x,y)
+       mesh%node(i)%theta=theta
+       mesh%node(i)%phi=phi
+       do l=0,mesh%multipole%lmax
+          mesh%multipole%rs(l+1)%val(i)=r**(l+2)
+          do m=-l,l
+             mesh%multipole%sph_harm_l(l+1)%m(m+l+1)%val(i)=func_sph_harm(l,m,theta,phi)
+          end do
+       end do
+    end do
+  end subroutine cart2sph
+
+  ! -----------------------------------------------
+  !
+  !        calc_theta(x,y,z)
+  !
+  ! -----------------------------------------------
+  function calc_theta(x,y,z)
+    implicit none
+    double precision::x,y,z,calc_theta
+    calc_theta=atan(sqrt(x*x+y*y)/z);
+    if(z.lt.0)calc_theta=pi+calc_theta
+        if((x.eq.0.0).and.(y.eq.0.0).and.(z.eq.0.0)) calc_theta=0.0
+    return
+  end function calc_theta
+  
+  ! -----------------------------------------------
+  !
+  !        calc_phi(x,y)
+  !
+  ! -----------------------------------------------
+  function calc_phi(x,y)
+    implicit none
+    double precision::x,y,calc_phi
+    calc_phi=atan(y/x);
+    if((x.lt.0.0).and.(y.gt.0.0)) calc_phi=pi+calc_phi
+    if((x.lt.0.0).and.(y.lt.0.0)) calc_phi=pi+calc_phi
+    if((x.gt.0.0).and.(y.lt.0.0)) calc_phi=2*pi+calc_phi
+    if((x.eq.0.0).and.(y.eq.0.0)) calc_phi=0.0
+    return
+  end function calc_phi
+  function func_sph_harm(l,morig,theta,phi)
+    implicit none
+    integer::l,m,i,morig
+    double precision::theta,phi,fac1,fac2,fac3
+    double complex::func_sph_harm
+    double precision::costheta
+
+    m=abs(morig)
+    !    double precision,external::plgndr
+    costheta=cos(theta)
+    fac1=1.0
+    do i=2,l-m
+       fac1=fac1*i
+    end do
+    fac2=fac1
+    do i=l-m+1,l+m
+       fac2=fac2*i
+    end do
+    fac3=sqrt((2*l+1)*fac1/(4*pi*fac2))*plgndr(l,m,costheta)
+    
+    if(morig.lt.0) then
+       fac3=fac3*(-1)**m
+       func_sph_harm=cmplx(fac3*cos(m*phi),-fac3*sin(m*phi))
+    else
+       func_sph_harm=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
+    end if
+
+    
+    
+  end function func_sph_harm
+  ! --------------------------------------------------------------------------------------
+  !
+  !      Legendre polynomials, associated (spherical harmonics) [6.8]
+  !      From http://sciold.ui.ac.ir/~sjalali/nrf/
+  !      Compute the associated Legendre polynomial Plm(x)
+  !      l and m are integers satisfying 0 <= m <= l, while x lies in
+  !      the range -1 <= x <= 1
+  ! --------------------------------------------------------------------------------------
+  FUNCTION plgndr(l,m,x)  
+    implicit none
+    integer::l,m
+    double precision::x,plgndr
+    double precision::pmm,somx2,fact,pmmp1,pll
+    integer::i,ll
+
+    if((m.lt.0).or.(m.gt.l).or.(abs(x).gt.1.0)) then
+       print *,"### ERROR in plgndr"
+       print *,"### l=",l
+       print *,"### m=",m
+       print *,"### abs(x)=",abs(x)
+       call exit()
+    end if
+
+    pmm=1.0
+    if(m.gt.0) then
+       somx2=sqrt((1.0-x)*(1.0+x))
+       fact=1.0
+       do i=1,m
+          pmm=-pmm*fact*somx2
+          fact=fact+2.0
+       end do
+    end if
+    if(l.eq.m) then
+       plgndr=pmm
+    else
+       pmmp1=x*(2*m+1)*pmm
+       if(l.eq.(m+1)) then
+          plgndr=pmmp1
+       else
+          do ll=m+2,l
+             pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
+             pmm=pmmp1
+             pmmp1=pll
+          end do
+          plgndr=pll
+       end if
+    end if
+    return
+  end FUNCTION plgndr
 
 end module mesh_mod

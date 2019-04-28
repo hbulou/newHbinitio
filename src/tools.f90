@@ -406,83 +406,18 @@ contains
     res=I*exp(-0.5*((r-r0)/sig)**2)/(sqrt(2*pi)*sig)
   end function gauss
 
+
+
   ! --------------------------------------------------------------------------------------
   !
-  !      Legendre polynomials, associated (spherical harmonics) [6.8]
-  !      From http://sciold.ui.ac.ir/~sjalali/nrf/
-  !      Compute the associated Legendre polynomial Plm(x)
-  !      l and m are integers satisfying 0 <= m <= l, while x lies in
-  !      the range -1 <= x <= 1
-  ! --------------------------------------------------------------------------------------
-  FUNCTION plgndr(l,m,x)  
-    implicit none
-    integer::l,m
-    double precision::x,plgndr
-    double precision::pmm,somx2,fact,pmmp1,pll
-    integer::i,ll
-
-    if((m.lt.0).or.(m.gt.l).or.(abs(x).gt.1.0)) then
-       print *,"### ERROR in plgndr"
-       call exit()
-    end if
-
-    pmm=1.0
-    if(m.gt.0) then
-       somx2=sqrt((1.0-x)*(1.0+x))
-       fact=1.0
-       do i=1,m
-          pmm=-pmm*fact*somx2
-          fact=fact+2.0
-       end do
-    end if
-    if(l.eq.m) then
-       plgndr=pmm
-    else
-       pmmp1=x*(2*m+1)*pmm
-       if(l.eq.(m+1)) then
-          plgndr=pmmp1
-       else
-          do ll=m+2,l
-             pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
-             pmm=pmmp1
-             pmmp1=pll
-          end do
-          plgndr=pll
-       end if
-    end if
-    return
-  end FUNCTION plgndr
-
-
-  function calc_theta(x,y,z)
-    implicit none
-    double precision::x,y,z,calc_theta
-    calc_theta=atan(sqrt(x*x+y*y)/z);
-    if(z.lt.0)calc_theta=pi+calc_theta
-        if((x.eq.0.0).and.(y.eq.0.0).and.(z.eq.0.0)) calc_theta=0.0
-    return
-  end function calc_theta
-  
-  function calc_phi(x,y)
-    implicit none
-    double precision::x,y,calc_phi
-    calc_phi=atan(y/x);
-    if((x.lt.0.0).and.(y.gt.0.0)) calc_phi=pi+calc_phi
-    if((x.lt.0.0).and.(y.lt.0.0)) calc_phi=pi+calc_phi
-    if((x.gt.0.0).and.(y.lt.0.0)) calc_phi=2*pi+calc_phi
-    if((x.eq.0.0).and.(y.eq.0.0)) calc_phi=0.0
-    return
-  end function calc_phi
-  ! --------------------------------------------------------------------------------------
-  !
-  ! Spherical harominc
+  ! Spherical harmonic
   !
   ! --------------------------------------------------------------------------------------
-  function sph_harm(l,morig,theta,phi)
+  subroutine sph_harm(l,morig,theta,phi,SH)
     implicit none
     integer::l,m,i,morig
     double precision::theta,phi,fac1,fac2,fac3
-    double complex::sph_harm
+    double complex::SH
     double precision::costheta
 
     m=abs(morig)
@@ -497,14 +432,18 @@ contains
        fac2=fac2*i
     end do
     fac3=sqrt((2*l+1)*fac1/(4*pi*fac2))*plgndr(l,m,costheta)
-
-    if(morig.gt.0) then
+    
+    if(morig.lt.0) then
        fac3=fac3*(-1)**m
-       sph_harm=cmplx(fac3*cos(m*phi),-fac3*sin(m*phi))
+       SH=cmplx(fac3*cos(m*phi),-fac3*sin(m*phi))
     else
-       sph_harm=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
+       SH=cmplx(fac3*cos(m*phi),fac3*sin(m*phi))
     end if
-    return
-  end function sph_harm
 
+    
+    
+  end subroutine  sph_harm
+
+
+  
 end module tools

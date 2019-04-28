@@ -18,7 +18,18 @@ contains
        r=sqrt(x*x+y*y+z*z)
        phi=calc_phi(x,y)
        theta=calc_theta(x,y,z)
-       SH(i)=sph_harm(l,m,theta,phi)/r
+       call sph_harm(l,m,theta,phi,SH(i))
+       if((z.eq.0.0).and.(l.eq.1).and.(m.eq.1)) then
+          print *,'calc_sph_harm(',l,',',m,')=',SH(i),&
+               -sqrt(3.0*0.5*0.25/pi)*sin(theta)*cos(phi)-dreal(SH(i)),&
+               -sqrt(3.0*0.5*0.25/pi)*sin(theta)*sin(phi)-dimag(SH(i))!,&               theta*180/pi,phi*180/pi
+       end if
+       if((z.eq.0.0).and.(l.eq.1).and.(m.eq.-1)) then
+          print *,'calc_sph_harm(',l,',',m,')=',SH(i),&
+               sqrt(3.0*0.5*0.25/pi)*sin(theta)*cos(phi)-dreal(SH(i)),&
+               -sqrt(3.0*0.5*0.25/pi)*sin(theta)*sin(phi)-dimag(SH(i))!,&               theta*180/pi,phi*180/pi
+       end if
+!       SH(i)=SH(i)/r
 !       print *,x,y,z,r,theta,phi,SH(i)
 !       print *,x,y,z,180*theta/pi,180*phi/pi
 !       print *,x,y,z,180*theta/pi,cos(theta)

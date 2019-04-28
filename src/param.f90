@@ -233,11 +233,7 @@ contains
        write(filename,'(a)') 'rho.cube'
        call save_cube_3D(molecule(nmol)%rho,filename,molecule(nmol)%mesh)
 
-
-
-
        open(unit=1,file="scan.dat",form='formatted',status='unknown')
-                 
        y=molecule(nmol)%mesh%box%center(2)
        z=molecule(nmol)%mesh%box%center(3)
        do i=-10,10
@@ -274,62 +270,34 @@ contains
           write(1,*) x,y,z,r1(4),norm/r1(4),(r1(1)*I2(1)+r1(2)*I2(2)+r1(3)*I2(3))/r1(4)**3,&
                norm/r1(4)+(r1(1)*I2(1)+r1(2)*I2(2)+r1(3)*I2(3))/r1(4)**3
 
-          print *,theta*pi/180,sph_harm(0,0,theta*pi/180,phi)
+!          print *,theta*pi/180,sph_harm(0,0,theta*pi/180,phi)
        end do
        close(1)
 
        deallocate(r2)
 
 
-       allocate(SH(molecule(nmol)%mesh%Ntot,9))
 
 
-
-       i=1
-       l=0 ; m=0 
-       call calc_sph_harm(molecule(nmol)%mesh,l,m,SH(:,i))
-       do j=1,molecule(nmol)%mesh%Ntot
-          if(.not.(dimag(SH(j,i)).eq.(0.0))) then
-             print *,dimag(SH(j,i))," NOT ZERO l=",l," m=",m," j=",j
-          end if
-       end do
-       write(filename,'(a,i0,a,i0,a)') 'Y_',l,'_',m,'.cube'
-       call save_cube_3D(dreal(SH(:,i)),filename,molecule(nmol)%mesh)
-
-       i=2
-       l=1 ; m=0 
-       call calc_sph_harm(molecule(nmol)%mesh,l,m,SH(:,i))
-       do j=1,molecule(nmol)%mesh%Ntot
-          if(.not.(dimag(SH(j,i)).eq.(0.0))) then
-             print *,dimag(SH(j,i))," NOT ZERO l=",l," m=",m," j=",j
-          end if
-       end do
-       write(filename,'(a,i0,a,i0,a)') 'Y_',l,'_',m,'.cube'
-       call save_cube_3D(dreal(SH(:,i)),filename,molecule(nmol)%mesh)
-
-       i=3
-       l=1 ; m=1 
-       call calc_sph_harm(molecule(nmol)%mesh,l,m,SH(:,i))
-
-       i=4
-       l=1 ; m=-1 
-       call calc_sph_harm(molecule(nmol)%mesh,l,m,SH(:,i))
-
-       i=5
-       SH(:,i)=SH(:,3)-SH(:,4)
-       do j=1,molecule(nmol)%mesh%Ntot
-          if(.not.(dimag(SH(j,i)).eq.(0.0))) then
-             print *,dimag(SH(j,i))," NOT ZERO l=",l," m=",m," j=",j
-          end if
-       end do
-       write(filename,'(a)') 'Y.cube'
-       call save_cube_3D(dreal(SH(:,i)),filename,molecule(nmol)%mesh)
-
-
-
-
-
-       deallocate(SH)
+       write(filename,'(a)') 'Y00.cube'
+       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val),filename,molecule(nmol)%mesh)
+       write(filename,'(a)') 'Y10.cube'
+       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val),filename,molecule(nmol)%mesh)
+       write(filename,'(a)') 'Y1+.cube'
+       call save_cube_3D(&
+            dimag(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val&
+            +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val)/sqrt(2.0),&
+            filename,molecule(nmol)%mesh)
+       write(filename,'(a)') 'Y1-.cube'
+       call save_cube_3D(&
+            dreal(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val&
+            -molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val)/sqrt(2.0),&
+            filename,molecule(nmol)%mesh)
+!       do i=1,molecule(nmol)%mesh%Ntot
+!          print *,molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val(i)&
+!               +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val(i),&
+!               molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val(i)
+!       end do
 
        call exit()
     case("tdse")
