@@ -522,6 +522,11 @@ contains
     if((x.eq.0.0).and.(y.eq.0.0)) calc_phi=0.0
     return
   end function calc_phi
+  ! --------------------------------------------------------------------------------------
+  !
+  !  func_sph_harm(l,m,theta,phi) --> Ylm(theta,phi) COMPLEX
+  !
+  ! --------------------------------------------------------------------------------------
   function func_sph_harm(l,morig,theta,phi)
     implicit none
     integer::l,m,i,morig

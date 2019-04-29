@@ -4,6 +4,21 @@ module experiment
   use IO
 contains
   ! ----------------------------------------------------------------------------
+  subroutine integrate_Yl1m1_Yl2m2(mesh,l1,m1,l2,m2)
+    implicit none
+    type(t_mesh)::mesh
+    double precision::I
+    integer::itheta,iphi,l1,m1,l2,m2
+    I=0.0
+    do itheta=0,900
+       do iphi=0,3600
+          I=I+sin(pi*itheta/180)*conjg(func_sph_harm(l1,m1,pi*itheta/180,pi*iphi/180))*&
+               func_sph_harm(l2,m2,pi*itheta/180,pi*iphi/180)
+       end do
+    end do
+    print *,I !*(0.1*pi/180.0)*(0.01*pi/180.0)
+  end subroutine integrate_Yl1m1_Yl2m2
+  ! ----------------------------------------------------------------------------
   subroutine calc_sph_harm(mesh,l,m,SH)
     implicit none
     integer::l,m,i,j

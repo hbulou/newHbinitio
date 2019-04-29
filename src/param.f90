@@ -293,12 +293,15 @@ contains
             dreal(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val&
             -molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val)/sqrt(2.0),&
             filename,molecule(nmol)%mesh)
-!       do i=1,molecule(nmol)%mesh%Ntot
-!          print *,molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val(i)&
-!               +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val(i),&
-!               molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val(i)
-!       end do
 
+       print *,molecule(nmol)%mesh%dv*&
+            sum(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val*molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val)
+       
+       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,0,0,0,0)
+       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,0,0)
+       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,1,0)
+       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,1,0,0)
+       
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"
