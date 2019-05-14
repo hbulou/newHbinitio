@@ -15,18 +15,20 @@ contains
     implicit none
     type(t_molecule)::molecule
     type(t_param)::param
-
     integer::i
     
-    call new_mesh(molecule%mesh,param)
+    print *,"> Entering new_molecule()"
+    
+    call new_mesh(molecule%mesh)
     call init_pot(molecule%mesh,molecule%pot)
     call save_potential(param,molecule%mesh,molecule)
+
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
     allocate(molecule%wf%eps(molecule%wf%nwfc))
     allocate(molecule%wf%epsprev(molecule%wf%nwfc))
     allocate(molecule%wf%deps(molecule%wf%nwfc))
     allocate(molecule%wf%wfc(molecule%mesh%nactive,molecule%wf%nwfc))
-    allocate(molecule%rho(molecule%mesh%nactive))
+    allocate(molecule%rho(molecule%mesh%Ntot))
 
     molecule%cvg%nwfc=param%nvecmin
     allocate(molecule%cvg%wfc(molecule%cvg%nwfc))
@@ -40,7 +42,13 @@ contains
        molecule%cvg%list_idx(i)=param%list_idx_to_cvg(i)
     end do
 
+    if(allocated(molecule%numerov%Q)) deallocate(molecule%numerov%Q)
+    allocate(molecule%numerov%Q(molecule%mesh%nactive))
+    if(allocated(molecule%numerov%r)) deallocate(molecule%numerov%r)
+    allocate(molecule%numerov%r(molecule%mesh%nactive))
+    print *,"#################### nactive= ",molecule%mesh%nactive
 
+    
   end subroutine new_molecule
 
 end module molecule_mod

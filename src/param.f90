@@ -8,6 +8,7 @@ module param_mod
   use experiment
   use FFT_mod
   use tdse_mod
+  use numerov_mod_dev
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -15,8 +16,9 @@ contains
   !              parse_line()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine parse_line(param,field,nfield,end_loop,nmol,molecule,time_spent)
+  subroutine parse_line(param,field,nfield,end_loop,nmol,molecule,time_spent,syst)
     implicit none
+    type(t_system)::syst
     type(t_param)::param
     character (len=32)::field(32)
     logical::end_loop
@@ -114,35 +116,105 @@ contains
        read(field(2),*) param%lorb
        ! ---------------------------------------------------------------
        !
-       !                    SETTING PART
+       !                    CREATE MOLECULE
+       !
+       ! --------------------------------------------------------------
+    case("create")
+       read(field(3),*) idxmol       
+       molecule(idxmol)%mesh%box%center(1)=molecule(idxmol)%mesh%box%center(1)*&
+            molecule(idxmol)%mesh%box%width
+       molecule(idxmol)%mesh%box%center(2)=molecule(idxmol)%mesh%box%center(2)*&
+            molecule(idxmol)%mesh%box%width
+       molecule(idxmol)%mesh%box%center(3)=molecule(idxmol)%mesh%box%center(3)*&
+            molecule(idxmol)%mesh%box%width
+       call new_mesh(molecule(idxmol)%mesh)
+       call init_pot(molecule(idxmol)%mesh,molecule(idxmol)%pot)
+
+       print *,molecule(idxmol)%wf%nwfc
+       allocate(molecule(idxmol)%wf%eps(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%epsprev(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%deps(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%wfc(molecule(idxmol)%mesh%nactive,molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%rho(molecule(idxmol)%mesh%Ntot))
+
+
+       allocate(molecule(idxmol)%cvg%wfc(molecule(idxmol)%wf%nwfc))
+       do i=1,molecule(idxmol)%cvg%nwfc
+          molecule(idxmol)%cvg%wfc%cvg=.FALSE.
+       end do
+       allocate(molecule(idxmol)%cvg%list_idx(molecule(idxmol)%cvg%nvec_to_cvg))
+       do i=1,molecule(idxmol)%cvg%nvec_to_cvg
+          molecule(idxmol)%cvg%list_idx(i)=param%list_idx_to_cvg(i)
+       end do
+       
+       allocate(molecule(idxmol)%numerov%Q(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%Vout(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%Vin(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%r(molecule(idxmol)%mesh%nactive))
+       ! ---------------------------------------------------------------
+       !
+       !                    SETTING MOLECULE
        !
        ! --------------------------------------------------------------
     case("set")
-       idxmol=1
+       print *,syst%nmol," molecule(s) are defined"
+       if(.not.(allocated(molecule))) then
+          nmol=1
+          allocate(molecule(nmol))
+       end if
+       idxmol=1       
        if(nfield.gt.1) then
-          do i=2,nfield
+          read(field(3),*) idxmol
+          do i=4,nfield
              select case (trim(field(i)))
-             case("molecule")
-                read(field(i+1),*) idxmol
-              case("N")
-                 read(field(i+1),*) molecule(idxmol)%param%Nx
-              case("radius")
-                 read(field(i+1),*) molecule(idxmol)%param%box%radius
-              case("nloopmax")
-                 read(field(i+1),*) molecule(idxmol)%param%loopmax
-              case("width")
-                 read(field(i+1),*) molecule(idxmol)%param%box%width
-              case("tdse_nstep")
-                 read(field(i+1),*) molecule(idxmol)%param%tdse%nstep
-              case("tdse_freq_save")
-                 read(field(i+1),*) molecule(idxmol)%param%tdse%freq_save
-              end select
+             case("dimension") 
+                read(field(i+1),*) molecule(idxmol)%mesh%dim
+                print *,"Dimension= ",molecule(idxmol)%mesh%dim
+             case("width")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%width
+                print *,"width= ",molecule(idxmol)%mesh%box%width
+             case("shape")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%shape
+             case("radius")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%radius
+             case("box_center") 
+                read(field(i+1),*) molecule(idxmol)%mesh%box%center(1)
+                read(field(i+2),*) molecule(idxmol)%mesh%box%center(2)
+                read(field(i+3),*) molecule(idxmol)%mesh%box%center(3)
+             case("N")
+                read(field(i+1),*) molecule(idxmol)%mesh%Nx
+             case("nvecmin")
+                read(field(i+1),*) molecule(idxmol)%wf%nwfc
+             case("nvec_to_cvg")
+                read(field(i+1),*) molecule(idxmol)%cvg%nvec_to_cvg
+             case("ETA")
+                read(field(i+1),*) molecule(idxmol)%cvg%ETA
+             case("nloopmax")
+                read(field(i+1),*) molecule(idxmol)%param%loopmax
+             case("tdse_nstep")
+                read(field(i+1),*) molecule(idxmol)%param%tdse%nstep
+             case("tdse_freq_save")
+                read(field(i+1),*) molecule(idxmol)%param%tdse%freq_save
+             case("numerov_Z")
+                read(field(i+1),*) molecule(idxmol)%numerov%Z
+             case("numerov_lorb")
+                read(field(i+1),*) molecule(idxmol)%numerov%lorb
+             case("hartree") 
+                read(field(i+1),*) molecule(idxmol)%param%hartree
+             case("exchange") 
+                read(field(i+1),*) molecule(idxmol)%param%exchange
+             end select
           end do
        end if
+
+
+    
        !call init_param_molecule(molecule(idxmol),param)
-       call new_molecule(molecule(idxmol),molecule(idxmol)%param)
+
+       !call new_molecule(molecule(idxmol),molecule(idxmol)%param)
        !call new_molecule(molecule(idxmol),param)
-       print *, "# Changing molecule  ",idxmol
+       !       print *, "# Changing molecule  ",idxmol
+       
     case("molecule") 
        select case (trim(field(2)))
        case("new")
@@ -217,14 +289,14 @@ contains
        print *,molecule(nmol)%mesh%box%center,molecule(nmol)%mesh%box%width
        print *,molecule(nmol)%mesh%dx
        sig=0.05*molecule(nmol)%mesh%box%width
-       do i=1,molecule(nmol)%mesh%nactive
+       do i=1,molecule(nmol)%mesh%Ntot
           x=0.5*(&
                (molecule(nmol)%mesh%node(i)%q(1)-molecule(nmol)%mesh%box%center(1))**2+&
                (molecule(nmol)%mesh%node(i)%q(2)-molecule(nmol)%mesh%box%center(2))**2+&
                (molecule(nmol)%mesh%node(i)%q(3)-molecule(nmol)%mesh%box%center(3))**2&
           )/sig**2
           molecule(nmol)%rho(i)=exp(-x)
-          !print *,i,x,y,z,molecule(nmol)%rho(i)
+          print *,i,x,y,z,molecule(nmol)%rho(i)
        enddo
        norm=sum(molecule(nmol)%rho)*molecule(nmol)%mesh%dv
        molecule(nmol)%rho=molecule(nmol)%rho/norm
@@ -251,7 +323,7 @@ contains
        I2(1)=sum(r2(:,1))*molecule(nmol)%mesh%dv
        I2(2)=sum(r2(:,2))*molecule(nmol)%mesh%dv
        I2(3)=sum(r2(:,3))*molecule(nmol)%mesh%dv       
-       print *,I2(1),I2(2),I2(3)
+!       print *,I2(1),I2(2),I2(3)
 
        phi=0.0
        open(unit=1,file="phi.dat",form='formatted',status='unknown')
@@ -280,25 +352,73 @@ contains
 
 
        write(filename,'(a)') 'Y00.cube'
-       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val),filename,molecule(nmol)%mesh)
+       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(0)%m(0)%val),filename,molecule(nmol)%mesh)
        write(filename,'(a)') 'Y10.cube'
-       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val),filename,molecule(nmol)%mesh)
+       call save_cube_3D(dreal(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(0)%val),filename,molecule(nmol)%mesh)
        write(filename,'(a)') 'Y1+.cube'
        call save_cube_3D(&
-            dimag(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val&
-            +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val)/sqrt(2.0),&
+            dimag(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(-1)%val&
+            +molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val)/sqrt(2.0),&
             filename,molecule(nmol)%mesh)
        write(filename,'(a)') 'Y1-.cube'
        call save_cube_3D(&
-            dreal(molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val&
-            -molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val)/sqrt(2.0),&
+            dreal(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(-1)%val&
+            -molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val)/sqrt(2.0),&
             filename,molecule(nmol)%mesh)
 !       do i=1,molecule(nmol)%mesh%Ntot
 !          print *,molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(1)%val(i)&
 !               +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val(i),&
 !               molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val(i)
 !       end do
+       print *,"HHHHHHH"
+       do l=0,molecule(nmol)%mesh%multipole%lmax
+          do m=-l,l
+             molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=0.0
+             do i=1,molecule(nmol)%mesh%nactive
+                molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
+                     molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)+&
+                     molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)*&
+                     molecule(nmol)%mesh%multipole%rs(l)%val(i)*molecule(nmol)%rho(i)
+                !          print *,&
+                !               molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i),&
+                !               molecule(nmol)%mesh%multipole%rs(l)%val(i),&
+                !               molecule(nmol)%rho(i)
+             end do
+             molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
+                  molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
+                  molecule(nmol)%mesh%dv
+          end do
+       end do
+       do i=molecule(nmol)%mesh%nunactive,molecule(nmol)%mesh%Ntot
+          molecule(nmol)%pot%hartree(i)=0.0
+          do l=0,molecule(nmol)%mesh%multipole%lmax
+             do m=-l,l
+                molecule(nmol)%pot%hartree(i)=&
+                     molecule(nmol)%pot%hartree(i)+&
+                     molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
+                     molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)/&
+                     ((2*l+1)*molecule(nmol)%mesh%node(i)%r**(l+1))
+             end do
+          end do
+          molecule(nmol)%pot%hartree(i)=4*pi*molecule(nmol)%pot%hartree(i)
+!          print *,i,molecule(nmol)%pot%hartree(i)
+       end do
 
+       write(filename,'(a)') 'hartree.cube'
+       call save_cube_3D(molecule(nmol)%pot%hartree,filename,molecule(nmol)%mesh)
+
+
+       call exit()
+    case ("numerov")
+       print *,"----------------------------------"
+       print *,"          NUMEROV             "
+       print *,"----------------------------------"
+       print *,"Dimension= ",molecule(nmol)%mesh%dim
+       print *,"Ntot= ",molecule(nmol)%mesh%Ntot
+       print *,"dx= ",molecule(nmol)%mesh%dx
+       print *,"Z= ",molecule(nmol)%numerov%Z
+       print *,"lorb= ",molecule(nmol)%numerov%lorb
+       call       numerov_new(molecule(nmol))
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"
@@ -497,7 +617,7 @@ contains
        read(2,'(A)') line
        call line_parser(line,nfield,field)
        print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
-       call parse_line(param,field,nfield,end_loop,syst%nmol,syst%molecule,syst%time_spent)
+       call parse_line(param,field,nfield,end_loop,syst%nmol,syst%molecule,syst%time_spent,syst)
        print *,"end_loop=",end_loop
     end do
     close(2)    
@@ -704,7 +824,7 @@ contains
     open(unit=1,file=param%filenrj,form='formatted',status='unknown') ;close(1)
 
 
-    call new_mesh(molecule%mesh,param)
+    call new_mesh(molecule%mesh)
     call init_pot(molecule%mesh,molecule%pot)
     call save_potential(param,molecule)
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
@@ -717,7 +837,7 @@ contains
     if(allocated(molecule%wf%wfc))     deallocate(molecule%wf%wfc)
     allocate(molecule%wf%wfc(molecule%mesh%nactive,molecule%wf%nwfc))
     if(allocated(molecule%rho))     deallocate(molecule%rho)
-    allocate(molecule%rho(molecule%mesh%nactive))
+    allocate(molecule%rho(molecule%mesh%Ntot))
 
     molecule%cvg%nwfc=param%nvecmin
     if(allocated(molecule%cvg%wfc))     deallocate(molecule%cvg%wfc)

@@ -11,6 +11,8 @@ dav1d:
 	cd test/davidson1D ; ../../bin/$(EXEC) inp_davidson1D
 experiment:
 	cd test/Experiment ; ../../bin/$(EXEC) inp_Experiment
+numerov:
+	cd test/Numerov ; ../../bin/$(EXEC) inp_Numerov
 doc: Hbinitio.pdf
 	cd doc ; pdflatex Hbinitio.tex
 movie:
