@@ -134,33 +134,51 @@ module global
      logical::active
   end type t_ijk_to_idx
 
-  type t_sph_harm_m
+  type t_cmplx_array
      double complex,allocatable::val(:)  ! for each node and l,  m
-  end type t_sph_harm_m
-  type t_sph_harm_l
-     type(t_sph_harm_m),allocatable::m(:)  ! for each node and l,  m
-  end type t_sph_harm_l
+  end type t_cmplx_array
+  type t_lm
+     type(t_cmplx_array),allocatable::m(:)  ! for each node and l,  m
+  end type t_lm
   !------------------------------------------
   type t_rs
      double precision,allocatable::val(:)                   ! Ntot nodes
   end type t_rs
   type t_multipole
      integer::lmax,mmax
-     type(t_sph_harm_l),allocatable::sph_harm_l(:)  ! l
+     type(t_lm),allocatable::sph_harm_l(:)  ! l
      type(t_rs),allocatable::rs(:)                   ! l
+     type(t_lm),allocatable::qlm(:)  ! multipole moment
   end type t_multipole
+  !----------------------------------------------------------------------------------------------------------
+  !
+  !  NODE is the data type which contains all the informations about the nodes
+  !  belonging to the mesh:
+  !      integer::n_neighbors                       ---> the number of neighbours
+  !      integer,allocatable::list_neighbors(:) --> the list of idx of the neighbours
+  !      integer::n_bound                        --> the number of unactive neighbour nodes
+  !                                                               This is usefull for computing the Hartree
+  !                                                               potential for example (boundary value)
+  !      integer,allocatable::list_bound(:) --> list of idx of the unactive neighbours
+  !     logical::active  --> state of the node (active=TRUE)
+  !     logical::usefull_unactive --> if unactite (active=FALSE), then is it a usefull
+  !                                                                                               node ?
+  !          integer::i,j,k  --> 3D indexes
+  !     double precision::q(3)  --> cartesian coordinates
+  !     double precision::r, theta, phi       --> spherical coordinate
+  !     double precision::phi
+  !     double precision::theta
+  !
+  !----------------------------------------------------------------------------------------------------------
   type t_node
      integer::n_neighbors
      integer,allocatable::list_neighbors(:)
      integer::n_bound
      integer,allocatable::list_bound(:)
-     logical::usefull_unactive
-     logical::active
+     logical::active, usefull_unactive
      integer::i,j,k
      double precision::q(3)
-     double precision::r
-     double precision::phi
-     double precision::theta
+     double precision::r,theta,phi
   end type t_node
   ! -----------------------------------------------------------
   !
@@ -194,6 +212,17 @@ module global
   end type t_wavefunction
   ! -----------------------------------------------------------
   !
+  !   NUMEROV data type
+  !
+  ! ----------------------------------------------------------
+  type t_numerov
+     double precision,allocatable::Q(:),Vout(:),Vin(:)
+     double precision,allocatable::r(:)
+     double precision::Z
+     integer::lorb
+  end type t_numerov
+  ! -----------------------------------------------------------
+  !
   !   MOLECULE data type
   !
   ! ----------------------------------------------------------
@@ -204,6 +233,7 @@ module global
      double precision,allocatable::rho(:) ! density inside the molecule
      type(t_cvg) :: cvg
      type(t_param)::param
+     type(t_numerov)::numerov
   end type t_molecule
   !------------------------------------------
   type t_system

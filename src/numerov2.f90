@@ -5,10 +5,132 @@ module numerov_mod_dev
   use conjugate_gradient_mod
   implicit none
 contains
-    ! --------------------------------------------------------------------------------------
+  ! --------------------------------------------------------------------------------------
   !
   !             Numerov()
   !
+  ! --------------------------------------------------------------------------------------
+  subroutine numerov_new(molecule)
+    implicit none
+    type(t_molecule)::molecule
+    integer::i
+    double precision::eps,sqrd
+    logical,parameter :: outward=.TRUE.,inward=.FALSE.
+    ! ---------------------------------------------------
+    !
+    ! building the radial mesh
+    !
+    ! ---------------------------------------------------
+
+    do i=1,molecule%mesh%nactive
+       molecule%numerov%r(i)=i*molecule%mesh%dx
+    end do
+
+
+    print *,"# numerov > dx=",molecule%mesh%dx,&
+         " first point @ r=",molecule%numerov%r(1)
+
+    ! ---------------------------------------------------
+    !
+    !  Potential part
+    !
+    ! ---------------------------------------------------
+    molecule%pot%hartree=0.0
+    molecule%pot%Vx=0.0
+    do i=1,molecule%mesh%nactive
+       molecule%pot%tot(i)=-molecule%numerov%Z/molecule%numerov%r(i)+&
+            0.5*molecule%numerov%lorb*(molecule%numerov%lorb+1)/molecule%numerov%r(i)**2
+    end do
+    if(molecule%param%hartree) then
+       do i=1,molecule%mesh%nactive
+          molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%hartree(i)
+       end do
+    end if
+    if(molecule%param%exchange) then
+       do i=1,molecule%mesh%nactive
+          molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
+       end do
+    end if
+    
+    open(unit=1,file='pot.dat',form='formatted',status='unknown')
+    do i=2,molecule%mesh%nactive
+       write(1,*) molecule%numerov%r(i),molecule%pot%tot(i),&
+            -molecule%numerov%Z/molecule%numerov%r(i),&
+            0.5*molecule%numerov%lorb*(molecule%numerov%lorb+1)/molecule%numerov%r(i)**2,&
+            molecule%pot%hartree(i),molecule%pot%Vx(i)
+    end do
+    close(1)
+    print *,'Numerov> Potential extrema ',minval(molecule%pot%tot),maxval(molecule%pot%tot)
+
+
+    
+    eps=molecule%pot%tot(molecule%mesh%nactive/2)
+    print *,"eps= ",eps
+    call compute_Q_new(molecule%numerov%Q,&
+         molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+
+    sqrd=molecule%mesh%dx**2    
+    molecule%numerov%Vout(1)=0.001
+    call numerov_integrate(outward,&
+         molecule%numerov%Q,&
+         molecule%numerov%Vout,&
+         molecule%mesh%nactive,&
+         sqrd)
+    print *,count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+    molecule%numerov%Vin(molecule%mesh%nactive)=0.001
+    call numerov_integrate(inward,&
+         molecule%numerov%Q,&
+         molecule%numerov%Vin,&
+         molecule%mesh%nactive,&
+         sqrd)
+    print *,count_nodes(molecule%numerov%Vin,molecule%mesh%nactive)
+
+    open(unit=1,file="Q.dat",form='formatted',status='unknown')
+    do i=1,molecule%mesh%nactive
+       write(1,*) molecule%numerov%r(i),&
+            molecule%numerov%Q(i),&
+            molecule%numerov%Vout(i),&
+            molecule%numerov%Vin(i)
+    end do
+    close(1)
+    
+    call exit()
+  end subroutine numerov_new
+    ! --------------------------------------------------------------------------------------
+    !
+    !             compute_Q()
+    !
+    ! --------------------------------------------------------------------------------------
+    subroutine compute_Q_new(Q,N,eps,r,pot)
+      double precision::Q(:),r(:),eps
+      double precision::pot(:)
+      integer::N,i
+      !    Q(1)=10000.0
+      do i=1,N
+         Q(i)=2.0*(eps-pot(i))
+      end do
+      open(unit=1,file="Q.dat",form='formatted',status='unknown')
+      do i=1,N
+         write(1,*) r(i),Q(i)
+      end do
+      close(1)
+      if(maxval(Q).lt.0.0) then
+         print *,'!!!! ERROR in compute_Q() !!!!'
+         print *,'Q<=',maxval(Q),'<0'
+         stop
+      end if
+      
+    end subroutine compute_Q_new
+
+
+
+
+
+
+
+
+
+
   ! --------------------------------------------------------------------------------------
   subroutine numerov(molecule,cvg,param)
     implicit none
@@ -22,7 +144,7 @@ contains
     integer::iloop
     character (len=1024) :: filename
 !    double precision::EHartree,EX
-    double precision,parameter::pi=4.0*atan(1.0)
+!    double precision,parameter::pi=4.0*atan(1.0)
 
 
 
@@ -220,8 +342,12 @@ contains
     integer :: impt,i
     double precision::emin,emax,dVin,dVout,Iout,Iin,deps,epsold,facsign,eta
     logical,parameter :: outward=.TRUE.,inward=.FALSE.
-    ! first we search an eigenenergy close to the soution
-    ! by considering the number of nodes of the wavefunction
+    !-------------------------------------------------------------------------------------------------------------
+    !
+    !   first we search an eigenenergy close to the solution
+    !          by considering the number of nodes of the wavefunction
+    !
+    !-------------------------------------------------------------------------------------------------------------
     allocate(Q(molecule%mesh%nactive))
     allocate(Vin(molecule%mesh%nactive))
     allocate(Vout(molecule%mesh%nactive))
@@ -404,7 +530,7 @@ contains
       
 
     end subroutine numerov_step
-      ! --------------------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------------------
     !
     !             compute_Q()
     !

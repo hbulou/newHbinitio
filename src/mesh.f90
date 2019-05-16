@@ -4,30 +4,13 @@ module mesh_mod
 contains
   ! -----------------------------------------------
   !
-  !       new_mesh(m,param)
+  !       new_mesh(m)
   !
   ! -----------------------------------------------
-  subroutine new_mesh(mesh,param)
+  subroutine new_mesh(mesh)
     implicit none
     type(t_mesh)::mesh
-    type(t_param)::param
     integer::i,j
-    mesh%dim=param%dim
-    mesh%box%width=param%box%width
-    mesh%box%shape=param%box%shape
-    mesh%box%radius=param%box%radius
-    mesh%box%center(1)=param%box%center(1)*mesh%box%width
-    mesh%box%center(2)=param%box%center(2)*mesh%box%width
-    mesh%box%center(3)=param%box%center(3)*mesh%box%width
-    print *,"# new_mesh > box width =",mesh%box%width
-    print *,"# new_mesh > box center @ (",mesh%box%center,")"
-    mesh%Nx=param%Nx
-    mesh%perturb%location(1)=param%perturb%location(1)
-    mesh%perturb%location(2)=param%perturb%location(2)
-    mesh%perturb%location(3)=param%perturb%location(3)
-    mesh%perturb%Intensity=param%perturb%Intensity
-    mesh%perturb%sigma=param%perturb%sigma
-    mesh%perturb%shape=param%perturb%shape
     ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !
     !                3D
@@ -80,15 +63,19 @@ contains
     mesh%multipole%mmax=(mesh%multipole%lmax+1)**2
 
     if(allocated(mesh%multipole%rs)) deallocate(mesh%multipole%rs)
-    allocate(mesh%multipole%rs(mesh%multipole%lmax+1))
+    allocate(mesh%multipole%rs(0:mesh%multipole%lmax))
 
+    if(allocated(mesh%multipole%qlm)) deallocate(mesh%multipole%qlm)
+    allocate(mesh%multipole%qlm(0:mesh%multipole%lmax))
     if(allocated(mesh%multipole%sph_harm_l)) deallocate(mesh%multipole%sph_harm_l)
-    allocate(mesh%multipole%sph_harm_l(mesh%multipole%lmax+1))
+    allocate(mesh%multipole%sph_harm_l(0:mesh%multipole%lmax))
     do i=0,mesh%multipole%lmax
-       allocate(mesh%multipole%rs(i+1)%val(mesh%Ntot))
-       allocate(mesh%multipole%sph_harm_l(i+1)%m(2*i+1))
-       do j=0,2*i
-          allocate(mesh%multipole%sph_harm_l(i+1)%m(j+1)%val(mesh%Ntot))
+       allocate(mesh%multipole%rs(i)%val(mesh%Ntot))
+       allocate(mesh%multipole%qlm(i)%m(-i:i))
+       allocate(mesh%multipole%sph_harm_l(i)%m(-i:i))
+       do j=-i,i
+          allocate(mesh%multipole%sph_harm_l(i)%m(j)%val(mesh%Ntot))
+          allocate(mesh%multipole%qlm(i)%m(j)%val(1))
        end do
     end do
     do i=1,mesh%Ntot
@@ -100,7 +87,7 @@ contains
        mesh%node(i)%n_bound=0
     end do
 
-    call set_nodes(mesh,param)
+    call set_nodes(mesh)
     ! 2*mesh%dim=2  @1D
     ! 2*mesh%dim=4  @2D
     ! 2*mesh%dim=6  @3D
@@ -133,18 +120,25 @@ contains
     call compute_list_neighbors(mesh)
     call cart2sph(mesh)
   end subroutine new_mesh
-  ! -----------------------------------------------
+  ! -------------------------------------------------------------------------------------------------------------------
   !
-  ! set_idx_list(mesh)
+  !                          set_idx_list(mesh)
   !
-  ! -----------------------------------------------
-  subroutine set_nodes(mesh,param)
+  ! * There is Ntot nodes in the system ; some of them are
+  !    "active" (we compute quantities at these nodes), others are
+  !     or "unactive" (the values are fixed)
+  ! * It is in this subroutine that we set up the state of a node  
+  ! * Each node of the system is defined in the data type mesh by field mesh%node(idx)
+  ! * Depending of the state of the node, its index is either in [1:meash%nactive] or
+  !    in (mesh%nactive+1,mesh%Ntot]
+  !    
+  ! -------------------------------------------------------------------------------------------------------------------
+  subroutine set_nodes(mesh)
     type(t_mesh)::mesh
     integer::i,j,k
     double precision::d,x,y,z
     logical::CompDomain
     character (len=1024) :: filename
-    type(t_param)::param
     
     print *," Starting set_nodes()"
     if(allocated(mesh%ijk_to_idx))     deallocate(mesh%ijk_to_idx)
@@ -220,13 +214,13 @@ contains
        !       stop
        !    end if
        
-
-       write(filename,'(a,a)') param%prefix(:len_trim(param%prefix)),'/domain.xyz'
-    open(unit=1,file=filename,form='formatted',status='unknown')
-    write(1,*) mesh%Ntot
-    write(1,*)
-    do k=1,mesh%Nz
-       do i=1,mesh%Nx
+       
+       write(filename,'(a)') 'domain.xyz'
+       open(unit=1,file=filename,form='formatted',status='unknown')
+       write(1,*) mesh%Ntot
+       write(1,*)
+       do k=1,mesh%Nz
+          do i=1,mesh%Nx
           do j=1,mesh%Ny
              if(mesh%ijk_to_idx(i,j,k)%active) then
                 write(1,*) 'Cu ',&
@@ -244,7 +238,6 @@ contains
     end do
     close(1)
     print *,"# set_nodes > total number of nodes (active + unactive)" ,mesh%Ntot
-    print *,"# set_nodes > radius=",param%box%radius
     print *,"# set_nodes > ",mesh%nactive," actives nodes"
     print *,"# set_nodes > ",mesh%Ntot-mesh%nunactive+1," unactives nodes"
     
@@ -485,9 +478,13 @@ contains
        mesh%node(i)%theta=theta
        mesh%node(i)%phi=phi
        do l=0,mesh%multipole%lmax
-          mesh%multipole%rs(l+1)%val(i)=r**(l+2)
+          if(l.eq.0) then
+             mesh%multipole%rs(l)%val(i)=1.0
+          else
+             mesh%multipole%rs(l)%val(i)=r**l
+          end if
           do m=-l,l
-             mesh%multipole%sph_harm_l(l+1)%m(m+l+1)%val(i)=func_sph_harm(l,m,theta,phi)
+             mesh%multipole%sph_harm_l(l)%m(m)%val(i)=func_sph_harm(l,m,theta,phi)
           end do
        end do
     end do

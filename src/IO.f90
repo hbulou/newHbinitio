@@ -121,7 +121,7 @@ contains
           do j=1,m%Ny
              nn=m%ijk_to_idx(i,j,k)%n
              val=data(nn)
-             !if(m%node(nn)%unactive) val=0.0
+!             if(.not.(m%node(nn)%active)) val=0.0
              write(1,'(E13.5)',advance='no') val
              ifield=ifield+1
              if (mod(ifield,6).eq.0) then
