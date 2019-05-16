@@ -14,9 +14,10 @@ contains
   subroutine numerov_new(molecule)
     implicit none
     type(t_molecule)::molecule
-    integer::i
-    double precision::eps,sqrd
+    integer::i,j,n
+    double precision::eps,sqrd,fac,diff,k,maxpot
     logical,parameter :: outward=.TRUE.,inward=.FALSE.
+    integer::n_nodes,n_nodes_target,idxwfc,lorb
     ! ---------------------------------------------------
     !
     ! building the radial mesh
@@ -26,88 +27,257 @@ contains
     do i=1,molecule%mesh%nactive
        molecule%numerov%r(i)=i*molecule%mesh%dx
     end do
-
-
-    print *,"# numerov > dx=",molecule%mesh%dx,&
-         " first point @ r=",molecule%numerov%r(1)
-
-    ! ---------------------------------------------------
-    !
-    !  Potential part
-    !
-    ! ---------------------------------------------------
-    molecule%pot%hartree=0.0
-    molecule%pot%Vx=0.0
-    do i=1,molecule%mesh%nactive
-       molecule%pot%tot(i)=-molecule%numerov%Z/molecule%numerov%r(i)+&
-            0.5*molecule%numerov%lorb*(molecule%numerov%lorb+1)/molecule%numerov%r(i)**2
-    end do
-    if(molecule%param%hartree) then
-       do i=1,molecule%mesh%nactive
-          molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%hartree(i)
-       end do
-    end if
-    if(molecule%param%exchange) then
-       do i=1,molecule%mesh%nactive
-          molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
-       end do
-    end if
-    
-    open(unit=1,file='pot.dat',form='formatted',status='unknown')
-    do i=2,molecule%mesh%nactive
-       write(1,*) molecule%numerov%r(i),molecule%pot%tot(i),&
-            -molecule%numerov%Z/molecule%numerov%r(i),&
-            0.5*molecule%numerov%lorb*(molecule%numerov%lorb+1)/molecule%numerov%r(i)**2,&
-            molecule%pot%hartree(i),molecule%pot%Vx(i)
-    end do
-    close(1)
-    print *,'Numerov> Potential extrema ',minval(molecule%pot%tot),maxval(molecule%pot%tot)
-
-
-    
-    eps=molecule%pot%tot(molecule%mesh%nactive/2)
-    print *,"eps= ",eps
-    call compute_Q_new(molecule%numerov%Q,&
-         molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
-
     sqrd=molecule%mesh%dx**2    
-    molecule%numerov%Vout(1)=0.001
-    call numerov_integrate(outward,&
-         molecule%numerov%Q,&
-         molecule%numerov%Vout,&
-         molecule%mesh%nactive,&
-         sqrd)
-    print *,count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
-    molecule%numerov%Vin(molecule%mesh%nactive)=0.001
-    call numerov_integrate(inward,&
-         molecule%numerov%Q,&
-         molecule%numerov%Vin,&
-         molecule%mesh%nactive,&
-         sqrd)
-    print *,count_nodes(molecule%numerov%Vin,molecule%mesh%nactive)
+!    print *,"# numerov > dx=",molecule%mesh%dx,&
+!         " first point @ r=",molecule%numerov%r(1)
 
-    molecule%numerov%n_node_max=0
-    allocate(molecule%numerov%list_nrj_node(1:2,-1:-1))
-!    print *,shape(molecule%numerov%list_nrj_node)
-!    print *,ubound(molecule%numerov%list_nrj_node)
-    molecule%numerov%list_nrj_node(1,-1)=1
-    molecule%numerov%list_nrj_node(2,-1)=2
-    print *,molecule%numerov%list_nrj_node
-    call realloc2D(molecule%numerov%list_nrj_node,1,2,-1,3)
-    print *,molecule%numerov%list_nrj_node
+
+
+    idxwfc=0
+
+    do n=1,3
+       do lorb=0,n-1
+          n_nodes_target=n-lorb
+          idxwfc=idxwfc+1
+          print *,idxwfc,n_nodes_target,lorb
+          if(idxwfc.gt.molecule%wf%nwfc) then
+             print *,"WARNING! the number of wavefunction is too small"
+             call exit()
+          end if
+          ! ---------------------------------------------------
+          !
+          !  Potential part
+          !
+          ! ---------------------------------------------------
+          molecule%pot%hartree=0.0
+          molecule%pot%Vx=0.0
+          do i=1,molecule%mesh%nactive
+             molecule%pot%tot(i)=-molecule%numerov%Z/molecule%numerov%r(i)+&
+                  0.5*lorb*(lorb+1)/molecule%numerov%r(i)**2
+          end do
+          if(molecule%param%hartree) then
+             do i=1,molecule%mesh%nactive
+                molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%hartree(i)
+             end do
+          end if
+          if(molecule%param%exchange) then
+             do i=1,molecule%mesh%nactive
+                molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
+             end do
+          end if
+          
+          maxpot=min(molecule%pot%tot(molecule%mesh%nactive),maxval(molecule%pot%tot))
+
+          print *,"------------------------------------------------------------------"
+          print *,'|   n_nodes_target=',n_nodes_target
+          print *,'|   lorb=',lorb
+          print *,'|   idxwfc=',idxwfc
+          print *,'|   potential=',minval(molecule%pot%tot),maxpot
+          print *,"------------------------------------------------------------------"
+
+          fac=0.75
+          eps=((1.0-fac)*minval(molecule%pot%tot)+fac*maxpot)
+          
+          call compute_Q_new(molecule%numerov%Q,&
+               molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+          call find_classical_region(molecule)
+          
+          
+          molecule%numerov%Vout(1)=0.001
+          call numerov_integrate(outward,&
+               molecule%numerov%Q,&
+               molecule%numerov%Vout,&
+               molecule%mesh%nactive,&
+               sqrd)
+          n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+          print *,"n_nodes=",n_nodes
+          molecule%numerov%n_node_bounds(1)=n_nodes
+          molecule%numerov%n_node_bounds(2)=n_nodes
+          if(allocated(molecule%numerov%list_nrj_node)) deallocate(molecule%numerov%list_nrj_node)
+          allocate(molecule%numerov%list_nrj_node(1:2,&
+               molecule%numerov%n_node_bounds(1):molecule%numerov%n_node_bounds(2)))
+          molecule%numerov%list_nrj_node(1,n_nodes)=eps
+          molecule%numerov%list_nrj_node(2,n_nodes)=eps
+          
+          do while((molecule%numerov%n_node_bounds(1).gt.n_nodes_target).or.&
+               (molecule%numerov%n_node_bounds(2).lt.(n_nodes_target+1)))
+             if(n_nodes.gt.n_nodes_target)     eps=0.5*(eps+minval(molecule%pot%tot))
+             if(n_nodes.lt.(n_nodes_target+1))     eps=0.5*(eps+maxpot) 
+             call compute_Q_new(molecule%numerov%Q,&
+                  molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+             call find_classical_region(molecule)
+             molecule%numerov%Vout(1)=0.001
+             call numerov_integrate(outward,&
+                  molecule%numerov%Q,&
+                  molecule%numerov%Vout,&
+                  molecule%mesh%nactive,&
+                  sqrd)
+             n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+             call update_list_nrj_node(eps,n_nodes,molecule)
+             print *,"eps=",eps,"n_nodes=",n_nodes
+             print *,molecule%numerov%list_nrj_node
+          end do
+          
+          diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
+          do while(diff.gt.molecule%cvg%ETA)
+             eps=0.5*(molecule%numerov%list_nrj_node(2,n_nodes_target)+&
+                  molecule%numerov%list_nrj_node(1,n_nodes_target+1)) 
+             call compute_Q_new(molecule%numerov%Q,&
+                  molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+             call find_classical_region(molecule)
+             molecule%numerov%Vout(1)=0.001
+             call numerov_integrate(outward,&
+                  molecule%numerov%Q,&
+                  molecule%numerov%Vout,&
+                  molecule%mesh%nactive,&
+                  sqrd)
+             n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+             call update_list_nrj_node(eps,n_nodes,molecule)
+             diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
+             print *,"eps=",eps,"n_nodes=",n_nodes,"diff= ",diff
+!             print *, molecule%numerov%list_nrj_node
+          end do
+          
+          k=sqrt(molecule%pot%tot(molecule%mesh%nactive)-eps)
+          molecule%numerov%Vin(molecule%mesh%nactive)=exp(-k*molecule%mesh%node(molecule%mesh%nactive)%q(1))
+          call numerov_integrate(inward,&
+               molecule%numerov%Q,&
+               molecule%numerov%Vin,&
+               molecule%mesh%nactive,&
+               sqrd)
+          
+
+          do i=1,molecule%numerov%classical_region(2,1)
+             molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vout(i)/molecule%numerov%Vout(molecule%numerov%classical_region(2,1))
+          end do
+          do i=molecule%numerov%classical_region(2,1)+1,molecule%mesh%nactive
+             molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vin(i)/molecule%numerov%Vin(molecule%numerov%classical_region(2,1))
+          end do
+          call norm(molecule%mesh,molecule%wf%wfc(:,idxwfc))
+       end do
+    end do
+
+
 
     
     open(unit=1,file="Q.dat",form='formatted',status='unknown')
-    do i=1,molecule%mesh%nactive
+      do i=1,molecule%mesh%nactive
        write(1,*) molecule%numerov%r(i),&
-            molecule%numerov%Q(i),&
-            molecule%numerov%Vout(i),&
-            molecule%numerov%Vin(i)
+            (molecule%wf%wfc(i,j),j=1,idxwfc)!,&
+            ! molecule%numerov%Q(i),&
+            ! molecule%numerov%Vout(i),&
+            ! molecule%numerov%Vin(i),&
+            !   molecule%pot%tot(i)
     end do
     close(1)
     
     call exit()
   end subroutine numerov_new
+  ! --------------------------------------------------------------------------------------
+  !
+  !
+  !
+  ! --------------------------------------------------------------------------------------
+    function dnrj(molecule)
+      implicit none
+      type(t_molecule)::molecule
+      double precision:: dVinonVin,dVoutonVout,IVin,IVout,dnrj
+      dVinonVin=0.5*(molecule%numerov%Vin(molecule%numerov%classical_region(2,1)+1)-&
+           molecule%numerov%Vin(molecule%numerov%classical_region(2,1)-1))/&
+           (molecule%mesh%dx*molecule%numerov%Vin(molecule%numerov%classical_region(2,1)))
+      dVoutonVout=0.5*(molecule%numerov%Vout(molecule%numerov%classical_region(2,1)+1)-&
+           molecule%numerov%Vout(molecule%numerov%classical_region(2,1)-1))/&
+           (molecule%mesh%dx*molecule%numerov%Vout(molecule%numerov%classical_region(2,1)))
+      
+      IVout=simpson_sqr(molecule%mesh,&
+           molecule%mesh%dx*molecule%numerov%Vout,1,molecule%numerov%classical_region(2,1))/&
+           (molecule%numerov%Vout(molecule%numerov%classical_region(2,1))*&
+           molecule%numerov%Vout(molecule%numerov%classical_region(2,1)))
+      IVin=simpson_sqr(molecule%mesh,&
+           molecule%mesh%dx*molecule%numerov%Vin,molecule%numerov%classical_region(2,1),molecule%mesh%nactive)/&
+           (molecule%numerov%Vin(molecule%numerov%classical_region(2,1))*&
+           molecule%numerov%Vin(molecule%numerov%classical_region(2,1)))
+      dnrj=(dVinonVin-dVoutonVout)/(IVin+IVout)
+    end function dnrj
+  ! --------------------------------------------------------------------------------------
+  !
+  !
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine find_classical_region(molecule)
+    implicit none
+    type(t_molecule)::molecule
+    integer::i
+    logical::classical_region,continue_loop
+
+    if(allocated(molecule%numerov%classical_region)) deallocate(molecule%numerov%classical_region)
+    classical_region=.FALSE.
+    i=1
+    do while((i.le.molecule%mesh%nactive).or.(.not.classical_region))
+       if(molecule%numerov%Q(i).gt.0.0) classical_region=.TRUE.
+       i=i+1
+    end do
+
+    if(classical_region) then
+       print *,"classical_region",classical_region
+       molecule%numerov%n_classical=0
+       i=1
+       do while(i.lt.molecule%mesh%nactive)
+          do while(molecule%numerov%Q(i).lt.0.0)
+             i=i+1
+          end do
+          if(i.lt.molecule%mesh%nactive) then
+             print *,"starting at ",i
+             molecule%numerov%n_classical=molecule%numerov%n_classical+1
+             call irealloc2d(molecule%numerov%classical_region,1,2,1,molecule%numerov%n_classical)
+             molecule%numerov%classical_region(1,molecule%numerov%n_classical)=i
+             molecule%numerov%classical_region(2,molecule%numerov%n_classical)=molecule%mesh%nactive
+
+             continue_loop=.TRUE.
+             do while((i.le.(molecule%mesh%nactive-1)).and.(continue_loop))
+                if(molecule%numerov%Q(i)*molecule%numerov%Q(i+1).lt.0.0) then
+                   molecule%numerov%classical_region(2,molecule%numerov%n_classical)=i
+                   continue_loop=.FALSE.
+                end if
+                i=i+1
+                ! print *,"here",i,&
+                !      molecule%mesh%node(i)%q(1),&
+                !      molecule%mesh%nactive,molecule%numerov%Q(i),molecule%numerov%Q(i+1)
+             end do
+          end if
+       end do
+       print *,molecule%numerov%classical_region
+       do i=1,molecule%numerov%n_classical
+          print *,"classical region ",i,molecule%mesh%node(molecule%numerov%classical_region(1,i))%q(1),&
+               molecule%mesh%node(molecule%numerov%classical_region(2,i))%q(1)
+       end do
+    end if
+
+
+  end subroutine find_classical_region
+  ! --------------------------------------------------------------------------------------
+  !
+  !  subroutine update_list_nrj_node(eps,n_nodes,molecule)
+  !
+  ! --------------------------------------------------------------------------------------
+    subroutine update_list_nrj_node(eps,n_nodes,molecule)
+      implicit none
+      integer::n_nodes
+      double precision::eps
+      type(t_molecule)::molecule
+      if((n_nodes.lt.molecule%numerov%n_node_bounds(1)).or.&
+           (n_nodes.gt.molecule%numerov%n_node_bounds(2))) then
+         if(n_nodes.lt.molecule%numerov%n_node_bounds(1)) molecule%numerov%n_node_bounds(1)=n_nodes
+         if(n_nodes.gt.molecule%numerov%n_node_bounds(2)) molecule%numerov%n_node_bounds(2)=n_nodes 
+         call realloc2D(molecule%numerov%list_nrj_node,1,2,&
+              molecule%numerov%n_node_bounds(1),molecule%numerov%n_node_bounds(2))
+         molecule%numerov%list_nrj_node(1,n_nodes)=eps
+         molecule%numerov%list_nrj_node(2,n_nodes)=eps
+      else
+         if(eps.lt.molecule%numerov%list_nrj_node(1,n_nodes)) molecule%numerov%list_nrj_node(1,n_nodes)=eps
+         if(eps.gt.molecule%numerov%list_nrj_node(2,n_nodes)) molecule%numerov%list_nrj_node(2,n_nodes)=eps
+      end if
+    end subroutine update_list_nrj_node
     ! --------------------------------------------------------------------------------------
     !
     !             compute_Q()
@@ -140,6 +310,13 @@ contains
 
 
 
+
+
+
+
+
+
+    
 
 
 

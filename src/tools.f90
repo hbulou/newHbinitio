@@ -72,7 +72,7 @@ contains
     nvec=GS%nindep
     deallocate(a)
   end subroutine GramSchmidt
-    ! --------------------------------------------------------------------------------------
+  ! --------------------------------------------------------------------------------------
   !
   !              simpson()
   !
@@ -89,6 +89,27 @@ contains
     end do
     simpson=m%dv*simpson/3.0
   end function simpson
+  ! --------------------------------------------------------------------------------------
+  !
+  !              simpson()
+  !
+  ! --------------------------------------------------------------------------------------
+  function  simpson_sqr(m,f,a,b)
+    implicit none
+    type (t_mesh)::m
+    double precision::simpson_sqr
+    double precision :: f(:)
+    integer::i,a,b
+    if(a.gt.b) then
+       a=1
+       b=m%nactive
+    end if
+    simpson_sqr=0.0
+    do i=a,b-2,2
+       simpson_sqr=simpson_sqr+f(i)*f(i)+4*f(i+1)*f(i+1)+f(i+2)*f(i+2)
+    end do
+    simpson_sqr=m%dv*simpson_sqr/3.0
+  end function simpson_sqr
   ! --------------------------------------------------------------------------------------
   !
   !              trapz()
@@ -464,7 +485,6 @@ contains
   subroutine realloc2D(tab,n1,n2,m1,m2)
     implicit none
     double precision,allocatable::tab(:,:),tmp(:,:)
-    integer::n,oldn
     integer::n1,n2,m1,m2
     integer::bonds(2),dim(2)
     if (.not. allocated(tab)) then
@@ -472,12 +492,7 @@ contains
     else
        dim=shape(tab)
        bonds=ubound(tab)
- !      print *,dim
- !      print *,bonds
-       !       oldn=size(tab)
        allocate(tmp(bonds(1)-dim(1)+1:bonds(1),bonds(2)-dim(2)+1:bonds(2)))
-!       print *,shape(tab)
-!       print *,ubound(tab)
        tmp=tab
        deallocate(tab)
        allocate(tab(n1:n2,m1:m2))
@@ -485,5 +500,23 @@ contains
        deallocate(tmp)
     end if
   end subroutine realloc2D
+  subroutine irealloc2D(tab,n1,n2,m1,m2)
+    implicit none
+    integer,allocatable::tab(:,:),tmp(:,:)
+    integer::n1,n2,m1,m2
+    integer::bonds(2),dim(2)
+    if (.not. allocated(tab)) then
+       allocate(tab(n1:n2,m1:m2))
+    else
+       dim=shape(tab)
+       bonds=ubound(tab)
+       allocate(tmp(bonds(1)-dim(1)+1:bonds(1),bonds(2)-dim(2)+1:bonds(2)))
+       tmp=tab
+       deallocate(tab)
+       allocate(tab(n1:n2,m1:m2))
+       tab(bonds(1)-dim(1)+1:bonds(1),bonds(2)-dim(2)+1:bonds(2))=tmp
+       deallocate(tmp)
+    end if
+  end subroutine irealloc2D
   
 end module tools

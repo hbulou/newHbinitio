@@ -206,7 +206,7 @@ module global
   ! ----------------------------------------------------------
   type t_wavefunction
      integer :: nwfc
-     double precision,allocatable::wfc(:,:)
+     double precision,allocatable::wfc(:,:)      ! (node idx, num wf)
      double precision,allocatable::eps(:)
      double precision,allocatable ::epsprev(:),deps(:) ! eigenvalues
   end type t_wavefunction
@@ -220,8 +220,10 @@ module global
      double precision,allocatable::r(:)
      double precision::Z
      integer::lorb
-     integer::n_node_max
+     integer::n_node_bounds(1:2)
      double precision,allocatable::list_nrj_node(:,:)
+     integer::n_classical
+     integer,allocatable::classical_region(:,:)
   end type t_numerov
   ! -----------------------------------------------------------
   !
@@ -237,7 +239,11 @@ module global
      type(t_param)::param
      type(t_numerov)::numerov
   end type t_molecule
-  !------------------------------------------
+  ! -----------------------------------------------------------
+  !
+  !   SYSTEM data type
+  !
+  ! ----------------------------------------------------------
   type t_system
      type(t_time)::time_spent
      character (len=1024)::inputfile
