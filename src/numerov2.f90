@@ -75,7 +75,8 @@ contains
           print *,'|   potential=',minval(molecule%pot%tot),maxpot
           print *,"------------------------------------------------------------------"
 
-          fac=0.75
+          print *,"Searching the right energy for getting ",n_nodes_target," node(s)"
+          fac=0.5
           eps=((1.0-fac)*minval(molecule%pot%tot)+fac*maxpot)
           
           call compute_Q_new(molecule%numerov%Q,&
@@ -90,8 +91,7 @@ contains
                molecule%mesh%nactive,&
                sqrd)
           n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
-          print *,"n_nodes=",n_nodes
-          molecule%numerov%n_node_bounds(1)=n_nodes
+                    molecule%numerov%n_node_bounds(1)=n_nodes
           molecule%numerov%n_node_bounds(2)=n_nodes
           if(allocated(molecule%numerov%list_nrj_node)) deallocate(molecule%numerov%list_nrj_node)
           allocate(molecule%numerov%list_nrj_node(1:2,&
@@ -114,11 +114,23 @@ contains
                   sqrd)
              n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
              call update_list_nrj_node(eps,n_nodes,molecule)
-             print *,"eps=",eps,"n_nodes=",n_nodes
-             print *,molecule%numerov%list_nrj_node
+             !print *,"eps=",eps,"n_nodes=",n_nodes
+             print *,"number min of nodes: ",molecule%numerov%n_node_bounds(1),&
+                  "number max of nodes: ",molecule%numerov%n_node_bounds(2)
+             do i=molecule%numerov%n_node_bounds(1),molecule%numerov%n_node_bounds(2)
+                
+                print *,molecule%numerov%list_nrj_node(1,i),molecule%numerov%list_nrj_node(2,i)
+             end do
           end do
-          
           diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
+          print *,"The energy to get ",n_nodes_target," is in the range [",&
+               molecule%numerov%list_nrj_node(1,n_nodes_target),",",&
+               molecule%numerov%list_nrj_node(1,n_nodes_target+1),&
+               "] (diff= ",diff,")"
+
+
+          print *,"Now, we're going to reduce this range so that to reach a difference smaller than ",&
+               molecule%cvg%ETA
           do while(diff.gt.molecule%cvg%ETA)
              eps=0.5*(molecule%numerov%list_nrj_node(2,n_nodes_target)+&
                   molecule%numerov%list_nrj_node(1,n_nodes_target+1)) 
@@ -134,7 +146,7 @@ contains
              n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
              call update_list_nrj_node(eps,n_nodes,molecule)
              diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
-             print *,"eps=",eps,"n_nodes=",n_nodes,"diff= ",diff
+             print *,"           eps=",eps,"n_nodes=",n_nodes,"diff= ",diff
 !             print *, molecule%numerov%list_nrj_node
           end do
           
@@ -159,7 +171,7 @@ contains
 
 
 
-    
+    print *,"Writing Q.dat"
     open(unit=1,file="Q.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
        write(1,*) molecule%numerov%r(i),&
@@ -219,7 +231,7 @@ contains
     end do
 
     if(classical_region) then
-       print *,"classical_region",classical_region
+       print *,"classical_region ->",classical_region
        molecule%numerov%n_classical=0
        i=1
        do while(i.lt.molecule%mesh%nactive)
@@ -227,7 +239,6 @@ contains
              i=i+1
           end do
           if(i.lt.molecule%mesh%nactive) then
-             print *,"starting at ",i
              molecule%numerov%n_classical=molecule%numerov%n_classical+1
              call irealloc2d(molecule%numerov%classical_region,1,2,1,molecule%numerov%n_classical)
              molecule%numerov%classical_region(1,molecule%numerov%n_classical)=i
@@ -246,9 +257,9 @@ contains
              end do
           end if
        end do
-       print *,molecule%numerov%classical_region
+       print *,molecule%numerov%n_classical," classical regions(s)"
        do i=1,molecule%numerov%n_classical
-          print *,"classical region ",i,molecule%mesh%node(molecule%numerov%classical_region(1,i))%q(1),&
+          print *,"           classical region ",i,molecule%mesh%node(molecule%numerov%classical_region(1,i))%q(1),&
                molecule%mesh%node(molecule%numerov%classical_region(2,i))%q(1)
        end do
     end if
@@ -291,11 +302,11 @@ contains
       do i=1,N
          Q(i)=2.0*(eps-pot(i))
       end do
-      open(unit=1,file="Q.dat",form='formatted',status='unknown')
-      do i=1,N
-         write(1,*) r(i),Q(i)
-      end do
-      close(1)
+!      open(unit=1,file="Q.dat",form='formatted',status='unknown')
+!      do i=1,N
+!         write(1,*) r(i),Q(i)
+!      end do
+!      close(1)
       if(maxval(Q).lt.0.0) then
          print *,'!!!! ERROR in compute_Q() !!!!'
          print *,'Q<=',maxval(Q),'<0'
