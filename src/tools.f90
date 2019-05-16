@@ -445,5 +445,45 @@ contains
   end subroutine  sph_harm
 
 
+  ! subroutine realloc1D(tab,n1,n2)
+  !   implicit none
+  !   double precision,allocatable::tab(:),tmp(:)
+  !   integer::n,oldn
+  !   if (.not. allocated(tab)) then
+  !      allocate(tab(n1:n2))
+  !   else
+  !      oldn=size(tab)
+  !      allocate(tmp(oldn))
+  !      tmp=tab
+  !      deallocate(tab)
+  !      allocate(tab(n))
+  !      tab(1:oldn)=tmp
+  !      deallocate(tmp)
+  !   end if
+  ! end subroutine realloc1D
+  subroutine realloc2D(tab,n1,n2,m1,m2)
+    implicit none
+    double precision,allocatable::tab(:,:),tmp(:,:)
+    integer::n,oldn
+    integer::n1,n2,m1,m2
+    integer::bonds(2),dim(2)
+    if (.not. allocated(tab)) then
+       allocate(tab(n1:n2,m1:m2))
+    else
+       dim=shape(tab)
+       bonds=ubound(tab)
+ !      print *,dim
+ !      print *,bonds
+       !       oldn=size(tab)
+       allocate(tmp(bonds(1)-dim(1)+1:bonds(1),bonds(2)-dim(2)+1:bonds(2)))
+!       print *,shape(tab)
+!       print *,ubound(tab)
+       tmp=tab
+       deallocate(tab)
+       allocate(tab(n1:n2,m1:m2))
+       tab(bonds(1)-dim(1)+1:bonds(1),bonds(2)-dim(2)+1:bonds(2))=tmp
+       deallocate(tmp)
+    end if
+  end subroutine realloc2D
   
 end module tools

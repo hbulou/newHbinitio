@@ -3,6 +3,7 @@ module numerov_mod_dev
   use poten
   use mesh_mod
   use conjugate_gradient_mod
+  use tools
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -85,6 +86,17 @@ contains
          sqrd)
     print *,count_nodes(molecule%numerov%Vin,molecule%mesh%nactive)
 
+    molecule%numerov%n_node_max=0
+    allocate(molecule%numerov%list_nrj_node(1:2,-1:-1))
+!    print *,shape(molecule%numerov%list_nrj_node)
+!    print *,ubound(molecule%numerov%list_nrj_node)
+    molecule%numerov%list_nrj_node(1,-1)=1
+    molecule%numerov%list_nrj_node(2,-1)=2
+    print *,molecule%numerov%list_nrj_node
+    call realloc2D(molecule%numerov%list_nrj_node,1,2,-1,3)
+    print *,molecule%numerov%list_nrj_node
+
+    
     open(unit=1,file="Q.dat",form='formatted',status='unknown')
     do i=1,molecule%mesh%nactive
        write(1,*) molecule%numerov%r(i),&

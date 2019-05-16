@@ -220,6 +220,8 @@ module global
      double precision,allocatable::r(:)
      double precision::Z
      integer::lorb
+     integer::n_node_max
+     double precision,allocatable::list_nrj_node(:,:)
   end type t_numerov
   ! -----------------------------------------------------------
   !
