@@ -158,7 +158,8 @@ contains
                molecule%mesh%nactive,&
                sqrd)
           
-
+          print *,"Saving the Numerov wavefunctino into wfc(",idxwfc,")"
+          molecule%wf%eps(idxwfc)=eps
           do i=1,molecule%numerov%classical_region(2,1)
              molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vout(i)/molecule%numerov%Vout(molecule%numerov%classical_region(2,1))
           end do
@@ -175,13 +176,17 @@ contains
     open(unit=1,file="Q.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
        write(1,*) molecule%numerov%r(i),&
-            (molecule%wf%wfc(i,j),j=1,idxwfc)!,&
+            ((molecule%wf%wfc(i,j)/molecule%mesh%node(i)%q(1)),j=1,idxwfc)!,&
             ! molecule%numerov%Q(i),&
             ! molecule%numerov%Vout(i),&
             ! molecule%numerov%Vin(i),&
             !   molecule%pot%tot(i)
     end do
     close(1)
+
+    do i=1,idxwfc
+       print *,"eps(",i,")=",molecule%wf%eps(i)
+    end do
     
     call exit()
   end subroutine numerov_new
