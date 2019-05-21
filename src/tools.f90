@@ -89,6 +89,19 @@ contains
     end do
     simpson=m%dv*simpson/3.0
   end function simpson
+  
+  function  simpson_bounds(f,a,b,dv)
+    implicit none
+    double precision::simpson_bounds,dv
+    double precision :: f(:)
+    integer::i,a,b
+    simpson_bounds=0.0
+    do i=a,b-2,2
+       simpson_bounds=simpson_bounds+&
+            f(i)*f(i)+4*f(i+1)*f(i+1)+f(i+2)*f(i+2)
+    end do
+    simpson_bounds=dv*simpson_bounds/3.0
+  end function simpson_bounds
   ! --------------------------------------------------------------------------------------
   !
   !              simpson()

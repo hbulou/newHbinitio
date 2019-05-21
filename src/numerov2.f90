@@ -17,7 +17,7 @@ contains
     integer::i,j,n
     double precision::eps,sqrd,fac,diff,k,maxpot
     logical,parameter :: outward=.TRUE.,inward=.FALSE.
-    integer::n_nodes,n_nodes_target,idxwfc,lorb
+    integer::n_nodes,n_nodes_target,idxwfc,lorb,nwfc
     ! ---------------------------------------------------
     !
     ! building the radial mesh
@@ -30,20 +30,36 @@ contains
     sqrd=molecule%mesh%dx**2    
 !    print *,"# numerov > dx=",molecule%mesh%dx,&
 !         " first point @ r=",molecule%numerov%r(1)
+    ! ---------------------------------------------------
+    !
+    ! loop over the wavefunctions l=0,1,2,... and m=-l..+l
+    !
+    ! ---------------------------------------------------
+    nwfc=0
+    do n=1,3
+       do lorb=0,n-1
+          nwfc=nwfc+2*lorb+1  ! m=-l --> l
+       end do
+    end do
+    if(nwfc.gt.molecule%wf%nwfc) then
+       print *,"WARNING! the number of wavefunction is too small"
+       call exit()
+    end if
 
-
-
+    ! setting occupation
+    molecule%wf%occ=0.0
+    molecule%wf%occ(1)=1.0
+    molecule%wf%occ(2)=1.0
+    molecule%wf%occ(3)=1.0
+    
     idxwfc=0
-
     do n=1,3
        do lorb=0,n-1
           n_nodes_target=n-lorb
           idxwfc=idxwfc+1
+          molecule%wf%n(idxwfc)=n
+          molecule%wf%l(idxwfc)=lorb
           print *,idxwfc,n_nodes_target,lorb
-          if(idxwfc.gt.molecule%wf%nwfc) then
-             print *,"WARNING! the number of wavefunction is too small"
-             call exit()
-          end if
           ! ---------------------------------------------------
           !
           !  Potential part
@@ -158,7 +174,7 @@ contains
                molecule%mesh%nactive,&
                sqrd)
           
-          print *,"Saving the Numerov wavefunctino into wfc(",idxwfc,")"
+          print *,"Saving the Numerov wavefunction into wfc(",idxwfc,")"
           molecule%wf%eps(idxwfc)=eps
           do i=1,molecule%numerov%classical_region(2,1)
              molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vout(i)/molecule%numerov%Vout(molecule%numerov%classical_region(2,1))
@@ -170,26 +186,95 @@ contains
        end do
     end do
 
+    molecule%numerov%rho=0.0
+    do i=1,molecule%wf%nwfc
+       if(molecule%wf%occ(i).gt.0.0) then
+!          molecule%numerov%rho=molecule%numerov%rho+&
+!               molecule%wf%occ(i)*(2*molecule%wf%l(i)+1)*(molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
+          molecule%numerov%rho=molecule%numerov%rho+&
+               molecule%wf%occ(i)*(2*molecule%wf%l(i)+1)*(molecule%wf%wfc(:,i))**2
+       end if
+    end do
+    !print *,molecule%numerov%rho
 
-
+    ! ---------------------------------------------------
+    !
+    ! saving the wavefunctions
+    !
+    ! ---------------------------------------------------
     print *,"Writing Q.dat"
     open(unit=1,file="Q.dat",form='formatted',status='unknown')
       do i=1,molecule%mesh%nactive
        write(1,*) molecule%numerov%r(i),&
             ((molecule%wf%wfc(i,j)/molecule%mesh%node(i)%q(1)),j=1,idxwfc)!,&
-            ! molecule%numerov%Q(i),&
-            ! molecule%numerov%Vout(i),&
-            ! molecule%numerov%Vin(i),&
-            !   molecule%pot%tot(i)
+       !            molecule%numerov%rho(i)
+       ! molecule%numerov%Q(i),&
+       ! molecule%numerov%Vout(i),&
+       ! molecule%numerov%Vin(i),&
+       !   molecule%pot%tot(i)
     end do
+    
     close(1)
-
+    write(*,'(a4,a2,a1,a2,a2)') "eps(","n",',',"l",")"
     do i=1,idxwfc
-       print *,"eps(",i,")=",molecule%wf%eps(i)
+       write(*,'(a4,i2,a1,i2,a3,e12.6,a3,a12,f4.2)') "eps(",molecule%wf%n(i),&
+            ',',molecule%wf%l(i),")= ",molecule%wf%eps(i)," Ha",&
+            ' occupation= ',molecule%wf%occ(i)
     end do
+
+    print *,  "Charge= ",simpson(molecule%mesh,molecule%numerov%rho),"/",sum(molecule%wf%occ)
+    print *,  "Charge= ",simpson_bounds(molecule%numerov%rho,0,molecule%mesh%nactive+1,molecule%mesh%dv),&
+         "/",sum(molecule%wf%occ)
     
     call exit()
   end subroutine numerov_new
+  ! --------------------------------------------------------------------------------------
+!   subroutine Hartree_cg_new(molecule)
+!     implicit none
+!     type(t_potential)::pot
+! !    double precision::r(:)
+!     type(t_molecule)::molecule
+!     type(t_mesh)::mesh
+
+!     integer :: i
+!     double precision :: charge_inf
+!     double precision,allocatable::b(:)
+
+    
+    
+!     charge_inf=0.5*mesh%dx*(molecule%wf%wfc(1,1)**2+molecule%wf%wfc(mesh%nactive,1)**2)
+!     do i=1,mesh%nactive-1
+!        charge_inf=charge_inf+0.5*mesh%dx*(molecule%wf%wfc(i,1)**2+molecule%wf%wfc(i+1,1)**2)
+!     end do
+! !    charge_inf =2*charge_inf 
+!     print *,"charge @ infinite=",charge_inf 
+
+
+!     ! setting the source
+!     allocate(b(mesh%nactive))
+!     b=-4*pi*molecule%numerov%r*molecule%numerov%rho
+
+
+
+!     do i=1,mesh%nactive
+!        pot%hartree(i)=pot%hartree(i)*r(i)
+!     end do
+!     b(mesh%nactive)=b(mesh%nactive)-charge_inf/mesh%dx**2
+    
+!     call Conjugate_gradient_3D(-b,pot%hartree,mesh%nactive,mesh%dx,mesh)    
+
+!     open(unit=1,file='hartree.dat',form='formatted',status='unknown')
+!     write(1,*) r(1)-mesh%dx,0.0
+!     do i=1,mesh%nactive
+! !       pot%hartree(i)=pot%hartree(i)/r(i)
+!        write(1,*) r(i),pot%hartree(i)
+!     end do
+!     write(1,*) r(mesh%nactive)+mesh%dx,charge_inf  !/(r(mesh%nactive)+mesh%dx)
+!     close(1)
+    
+!     deallocate(b)
+!   end subroutine Hartree_cg_new
+
   ! --------------------------------------------------------------------------------------
   !
   !

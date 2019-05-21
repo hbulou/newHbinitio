@@ -134,7 +134,11 @@ contains
        allocate(molecule(idxmol)%wf%eps(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%epsprev(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%deps(molecule(idxmol)%wf%nwfc))
-       allocate(molecule(idxmol)%wf%wfc(molecule(idxmol)%mesh%nactive,molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%wfc(0:molecule(idxmol)%mesh%nactive,molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%n(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%l(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%m(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%occ(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%rho(molecule(idxmol)%mesh%Ntot))
 
 
@@ -151,6 +155,7 @@ contains
        allocate(molecule(idxmol)%numerov%Vout(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%Vin(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%r(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%mesh%nactive))
        ! ---------------------------------------------------------------
        !
        !                    SETTING MOLECULE

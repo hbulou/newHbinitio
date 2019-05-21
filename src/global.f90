@@ -209,6 +209,8 @@ module global
      double precision,allocatable::wfc(:,:)      ! (node idx, num wf)
      double precision,allocatable::eps(:)
      double precision,allocatable ::epsprev(:),deps(:) ! eigenvalues
+     integer,allocatable:: l(:),n(:),m(:) ! in case of spherical symmetry
+     double precision,allocatable::occ(:)  !occupation
   end type t_wavefunction
   ! -----------------------------------------------------------
   !
@@ -217,7 +219,7 @@ module global
   ! ----------------------------------------------------------
   type t_numerov
      double precision,allocatable::Q(:),Vout(:),Vin(:)
-     double precision,allocatable::r(:)
+     double precision,allocatable::r(:),rho(:)
      double precision::Z
      integer::lorb
      integer::n_node_bounds(1:2)
