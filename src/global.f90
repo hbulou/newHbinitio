@@ -211,6 +211,7 @@ module global
      double precision,allocatable ::epsprev(:),deps(:) ! eigenvalues
      integer,allocatable:: l(:),n(:),m(:) ! in case of spherical symmetry
      double precision,allocatable::occ(:)  !occupation
+     double precision::charge
   end type t_wavefunction
   ! -----------------------------------------------------------
   !

@@ -155,15 +155,40 @@ contains
     else if(m%dim.eq.2) then
        normloc=1.0/sqrt(m%dv*ddot(m%nactive,evec(:),1,evec(:),1))
     else    if(m%dim.eq.1) then
-       !       normloc=1.0/sqrt(trapz(m,evec))
+       !normloc=1.0/sqrt(trapz(m,sq))
        !       print *,normloc,sqrt(trapz(m,evec))
        normloc=1.0/sqrt(simpson(m,evec))
     else
        print *,' STOP in norm(): dimension=',m%dim,' not yet implemented!'
        stop
     end if
-    call dscal(m%nactive,normloc,evec(:),1)
+    call dscal(m%nactive,normloc,evec,1)
   end subroutine norm
+  subroutine  normsqr(m,evec) 
+    implicit none
+    double precision :: evec(:),normloc
+    double precision, external :: ddot
+    type(t_mesh)::m
+    double precision,allocatable::sq(:)
+    allocate(sq(m%nactive))
+    sq=evec**2
+    if(m%dim.eq.3) then
+       normloc=1.0/sqrt(m%dv*ddot(m%nactive,evec(:),1,evec(:),1))
+    else if(m%dim.eq.2) then
+       normloc=1.0/sqrt(m%dv*ddot(m%nactive,evec(:),1,evec(:),1))
+    else    if(m%dim.eq.1) then
+       !normloc=1.0/sqrt(trapz(m,sq))
+       !       print *,normloc,sqrt(trapz(m,evec))
+       !       normloc=1.0/sqrt(simpson(m,sq))
+       normloc=1.0/sqrt(m%dv*ddot(m%nactive,evec(:),1,evec(:),1))
+    else
+       print *,' STOP in norm(): dimension=',m%dim,' not yet implemented!'
+       stop
+    end if
+    call dscal(m%nactive,normloc,evec,1)
+    print *,"normloc= ",normloc
+    deallocate(sq)
+  end subroutine normsqr
   ! --------------------------------------------------------------------------------------
   !
   !              DIAGONALIZATION()
