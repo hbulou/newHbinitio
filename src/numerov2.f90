@@ -19,6 +19,7 @@ contains
     logical,parameter :: outward=.TRUE.,inward=.FALSE.
     integer::n_nodes,n_nodes_target,idxwfc,lorb,nwfc,nmax
     double precision::nelec
+    character (len=1024) :: filename
     ! ---------------------------------------------------
     !
     ! building the radial mesh
@@ -37,7 +38,7 @@ contains
     !
     ! ---------------------------------------------------
     nwfc=0
-    nmax=2
+    nmax=3
     do n=1,nmax
        do lorb=0,n-1
           nwfc=nwfc+2*lorb+1  ! m=-l --> l
@@ -56,7 +57,7 @@ contains
     molecule%wf%occ(4)=0.0
     molecule%wf%occ(5)=0.0
     molecule%pot%hartree=0.0
-
+    molecule%numerov%rho=0.0
     nelec=0
     i=0
     do n=1,nmax
@@ -69,7 +70,7 @@ contains
 
 
 
-    do iloop=1,2
+    do iloop=1,10
        idxwfc=0
        do n=1,nmax
           do lorb=0,n-1
@@ -91,7 +92,7 @@ contains
              end do
              if(molecule%param%hartree) then
                 do i=1,molecule%mesh%nactive
-                   molecule%pot%tot(i)=molecule%pot%tot(i)+&
+                   molecule%pot%tot(i)=molecule%pot%tot(i)-&
                         molecule%pot%hartree(i)/molecule%numerov%r(i)
                 end do
              end if
@@ -100,6 +101,22 @@ contains
                    molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
                 end do
              end if
+
+             ! ---------------------------------------------------
+             !
+             ! saving the potential
+             !
+             ! ---------------------------------------------------
+             write(filename,'(a,i0,a,i0,a)') 'potential_l',lorb,'_',iloop,'.dat'
+             open(unit=1,file=filename,form='formatted',status='unknown')
+             print *,'Writing ,',filename
+             do i=1,molecule%mesh%nactive
+                write(1,*) molecule%numerov%r(i),&
+                     molecule%pot%tot(i),&
+                     molecule%pot%hartree(i)/molecule%numerov%r(i)
+             end do
+             close(1)
+
              
              maxpot=min(molecule%pot%tot(molecule%mesh%nactive),maxval(molecule%pot%tot))
              
@@ -116,6 +133,7 @@ contains
              
              call compute_Q_new(molecule%numerov%Q,&
                   molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+
              call find_classical_region(molecule)
              
              
@@ -140,6 +158,7 @@ contains
                 if(n_nodes.lt.(n_nodes_target+1))     eps=0.5*(eps+maxpot) 
                 call compute_Q_new(molecule%numerov%Q,&
                      molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+                print *,'1 - nl= ',n,lorb
                 call find_classical_region(molecule)
                 molecule%numerov%Vout(1)=0.001
                 call numerov_integrate(outward,&
@@ -171,6 +190,7 @@ contains
                      molecule%numerov%list_nrj_node(1,n_nodes_target+1)) 
                 call compute_Q_new(molecule%numerov%Q,&
                      molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+                print *,'2 - nl= ',n,lorb
                 call find_classical_region(molecule)
                 molecule%numerov%Vout(1)=0.001
                 call numerov_integrate(outward,&
@@ -223,8 +243,9 @@ contains
        ! saving the wavefunctions
        !
        ! ---------------------------------------------------
-       print *,"Writing Q.dat"
-       open(unit=1,file="Q.dat",form='formatted',status='unknown')
+       write(filename,'(a,i0,a)') 'wfc',iloop,'.dat'
+       print *,"Writing ",filename
+       open(unit=1,file=filename,form='formatted',status='unknown')
        do i=1,molecule%mesh%nactive
           write(1,*) molecule%numerov%r(i),&
                ((molecule%wf%wfc(i,j)/molecule%mesh%node(i)%q(1)),j=1,idxwfc)!,&

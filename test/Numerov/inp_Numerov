@@ -35,10 +35,10 @@ set molecule 1 center 0.5 0.5 0.5
 set molecule 1 N 10000
 set molecule 1 nvecmin 30
 set molecule 1 nvec_to_cvg 12
-set molecule 1 ETA 1.0e-16
+set molecule 1 ETA 1.0e-12
 set molecule 1 numerov_Z 1.0
 set molecule 1 numerov_lorb 0	
-set molecule 1 hartree .FALSE.
+set molecule 1 hartree .TRUE.
 set molecule 1 exchange .FALSE.
 create molecule 1
 numerov
