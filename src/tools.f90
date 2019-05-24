@@ -186,7 +186,7 @@ contains
        stop
     end if
     call dscal(m%nactive,normloc,evec,1)
-    print *,"normloc= ",normloc
+!    print *,"normloc= ",normloc
     deallocate(sq)
   end subroutine normsqr
   ! --------------------------------------------------------------------------------------

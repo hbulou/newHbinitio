@@ -44,6 +44,8 @@ contains
     double complex,allocatable::fft_wfc(:)
 
     select case (trim(field(1)))
+    case("iprint_level") 
+       read(field(2),*) syst%iprint_level
     case("box_radius") 
        read(field(2),*) param%box%radius
     case("box_width") 
@@ -156,6 +158,7 @@ contains
        allocate(molecule(idxmol)%numerov%Vin(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%r(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%mesh%nactive))
        ! ---------------------------------------------------------------
        !
        !                    SETTING MOLECULE
@@ -188,22 +191,29 @@ contains
                 read(field(i+3),*) molecule(idxmol)%mesh%box%center(3)
              case("N")
                 read(field(i+1),*) molecule(idxmol)%mesh%Nx
-             case("nvecmin")
+              case("norbital")
                 read(field(i+1),*) molecule(idxmol)%wf%nwfc
+              case("mixing")
+                read(field(i+1),*) molecule(idxmol)%mixing
              case("nvec_to_cvg")
                 read(field(i+1),*) molecule(idxmol)%cvg%nvec_to_cvg
              case("ETA")
                 read(field(i+1),*) molecule(idxmol)%cvg%ETA
              case("nloopmax")
                 read(field(i+1),*) molecule(idxmol)%param%loopmax
+             case("occupation") 
+                do j=1,molecule(idxmol)%wf%nwfc
+                   print *,i,j,field(i+j)
+                   read(field(i+j),*) molecule(idxmol)%wf%occ(j)
+                end do
              case("tdse_nstep")
                 read(field(i+1),*) molecule(idxmol)%param%tdse%nstep
              case("tdse_freq_save")
                 read(field(i+1),*) molecule(idxmol)%param%tdse%freq_save
              case("numerov_Z")
                 read(field(i+1),*) molecule(idxmol)%numerov%Z
-             case("numerov_lorb")
-                read(field(i+1),*) molecule(idxmol)%numerov%lorb
+             case("numerov_nmax")
+                read(field(i+1),*) molecule(idxmol)%numerov%nmax
              case("hartree") 
                 read(field(i+1),*) molecule(idxmol)%param%hartree
              case("exchange") 
@@ -431,8 +441,8 @@ contains
        print *,"Ntot= ",molecule(nmol)%mesh%Ntot
        print *,"dx= ",molecule(nmol)%mesh%dx
        print *,"Z= ",molecule(nmol)%numerov%Z
-       print *,"lorb= ",molecule(nmol)%numerov%lorb
-       call       numerov_new(molecule(nmol))
+       print *,"nmax= ",molecule(nmol)%numerov%nmax
+       call       numerov_new(molecule(nmol),syst)
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"

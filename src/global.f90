@@ -26,7 +26,7 @@ module global
   ! -------------------------------------------------------
   type t_potential
      double precision,allocatable :: ext(:)      ! external potential
-     double precision,allocatable :: hartree(:)  ! hartreel potential
+     double precision,allocatable :: hartree(:)  ! hartree potential
      double precision,allocatable :: Vx(:)       ! exchange potential
      double precision,allocatable :: perturb(:)  ! perturbation potential
      double precision,allocatable :: tot(:)      ! perturbation potential
@@ -220,9 +220,9 @@ module global
   ! ----------------------------------------------------------
   type t_numerov
      double precision,allocatable::Q(:),Vout(:),Vin(:)
-     double precision,allocatable::r(:),rho(:)
+     double precision,allocatable::r(:),rho(:),rhoold(:)
      double precision::Z
-     integer::lorb
+     integer::nmax
      integer::n_node_bounds(1:2)
      double precision,allocatable::list_nrj_node(:,:)
      integer::n_classical
@@ -241,6 +241,7 @@ module global
      type(t_cvg) :: cvg
      type(t_param)::param
      type(t_numerov)::numerov
+     double precision::mixing   ! mixing scheme
   end type t_molecule
   ! -----------------------------------------------------------
   !
@@ -251,6 +252,7 @@ module global
      type(t_time)::time_spent
      character (len=1024)::inputfile
      integer::nmol
+     integer::iprint_level
      type(t_molecule),allocatable:: molecule(:)
   end type t_system
   !------------------------------------------
