@@ -20,7 +20,7 @@ contains
     print *,"> Entering new_molecule()"
     
     call new_mesh(molecule%mesh)
-    call init_pot(molecule%mesh,molecule%pot)
+    call init_pot(molecule)
     call save_potential(param,molecule%mesh,molecule)
 
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg

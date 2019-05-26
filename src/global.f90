@@ -26,11 +26,12 @@ module global
   ! -------------------------------------------------------
   type t_potential
      double precision,allocatable :: ext(:)      ! external potential
-     double precision,allocatable :: hartree(:)  ! hartree potential
+     double precision,allocatable :: hartree(:,:)  ! hartree potential
      double precision,allocatable :: Vx(:)       ! exchange potential
      double precision,allocatable :: perturb(:)  ! perturbation potential
      double precision,allocatable :: tot(:)      ! perturbation potential
-     double precision::EX,Ehartree
+     double precision::EX
+     double precision,allocatable::Ehartree(:)
   end type t_potential
   ! --------------------------------------------------------
   !
@@ -211,7 +212,7 @@ module global
      double precision,allocatable ::epsprev(:),deps(:) ! eigenvalues
      integer,allocatable:: l(:),n(:),m(:) ! in case of spherical symmetry
      double precision,allocatable::occ(:)  !occupation
-     double precision::charge
+     double precision,allocatable::charge(:)
   end type t_wavefunction
   ! -----------------------------------------------------------
   !
@@ -220,7 +221,7 @@ module global
   ! ----------------------------------------------------------
   type t_numerov
      double precision,allocatable::Q(:),Vout(:),Vin(:)
-     double precision,allocatable::r(:),rho(:),rhoold(:)
+     double precision,allocatable::r(:),rho(:,:),rhoold(:,:)
      double precision::Z
      integer::nmax
      integer::n_node_bounds(1:2)

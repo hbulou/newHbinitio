@@ -8,27 +8,30 @@ contains
   !             init_pot()
   !
   ! --------------------------------------------------------------------------------------
-  subroutine init_pot(mesh,pot)
+  subroutine init_pot(molecule)
     implicit none
-    type(t_mesh)::mesh
-    type(t_potential)::pot
+    type(t_molecule)::molecule
 
-    if(allocated(pot%ext))     deallocate(pot%ext)
-    allocate(pot%ext(mesh%Ntot))
-    if(allocated(pot%hartree))     deallocate(pot%hartree)
-    allocate(pot%hartree(mesh%Ntot))
-    if(allocated(pot%Vx))     deallocate(pot%Vx)
-    allocate(pot%Vx(mesh%Ntot))
-    pot%hartree=0.0
-    pot%Vx=0.0
-    if(allocated(pot%perturb))     deallocate(pot%perturb)
-    allocate(pot%perturb(mesh%Ntot))
-    pot%perturb=0.0
-    if(allocated(pot%tot))     deallocate(pot%tot)
-    allocate(pot%tot(mesh%Ntot))
-    call Vext2(mesh,pot%ext)
-    call Vperturb(mesh,pot)
-    pot%tot=pot%ext+pot%hartree !+pot%perturb
+
+    if(allocated(molecule%pot%ext))     deallocate(molecule%pot%ext)
+    allocate(molecule%pot%ext(molecule%mesh%Ntot))
+    if(allocated(molecule%pot%hartree))     deallocate(molecule%pot%hartree)
+    allocate(molecule%pot%hartree(molecule%wf%nwfc,molecule%mesh%Ntot))
+    if(allocated(molecule%pot%Ehartree))     deallocate(molecule%pot%Ehartree)
+    allocate(molecule%pot%Ehartree(molecule%wf%nwfc))
+    if(allocated(molecule%pot%Vx))     deallocate(molecule%pot%Vx)
+    allocate(molecule%pot%Vx(molecule%mesh%Ntot))
+    molecule%pot%hartree=0.0
+    molecule%pot%Vx=0.0
+    if(allocated(molecule%pot%perturb))     deallocate(molecule%pot%perturb)
+    allocate(molecule%pot%perturb(molecule%mesh%Ntot))
+    molecule%pot%perturb=0.0
+    if(allocated(molecule%pot%tot))     deallocate(molecule%pot%tot)
+    allocate(molecule%pot%tot(molecule%mesh%Ntot))
+    call Vext2(molecule%mesh,molecule%pot%ext)
+    call Vperturb(molecule%mesh,molecule%pot)
+!    molecule%pot%tot=molecule%pot%ext+&
+!         molecule%pot%hartree !+molecule%pot%perturb
   end subroutine init_pot
   ! --------------------------------------------------------------------------------------
   !

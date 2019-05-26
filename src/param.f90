@@ -130,7 +130,7 @@ contains
        molecule(idxmol)%mesh%box%center(3)=molecule(idxmol)%mesh%box%center(3)*&
             molecule(idxmol)%mesh%box%width
        call new_mesh(molecule(idxmol)%mesh)
-       call init_pot(molecule(idxmol)%mesh,molecule(idxmol)%pot)
+       call init_pot(molecule(idxmol))
 
        print *,molecule(idxmol)%wf%nwfc
        allocate(molecule(idxmol)%wf%eps(molecule(idxmol)%wf%nwfc))
@@ -141,6 +141,7 @@ contains
        allocate(molecule(idxmol)%wf%l(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%m(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%occ(molecule(idxmol)%wf%nwfc))
+       allocate(molecule(idxmol)%wf%charge(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%rho(molecule(idxmol)%mesh%Ntot))
 
 
@@ -157,8 +158,10 @@ contains
        allocate(molecule(idxmol)%numerov%Vout(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%Vin(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%r(molecule(idxmol)%mesh%nactive))
-       allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%mesh%nactive))
-       allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%wf%nwfc,&
+            molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%wf%nwfc,&
+            molecule(idxmol)%mesh%nactive))
        ! ---------------------------------------------------------------
        !
        !                    SETTING MOLECULE
@@ -385,52 +388,52 @@ contains
 !               +molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(3)%val(i),&
 !               molecule(nmol)%mesh%multipole%sph_harm_l(2)%m(2)%val(i)
 !       end do
-       print *,"HHHHHHH"
-       do l=0,molecule(nmol)%mesh%multipole%lmax
-          do m=-l,l
-             molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=0.0
-             do i=1,molecule(nmol)%mesh%nactive
-                molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
-                     molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)+&
-                     molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)*&
-                     molecule(nmol)%mesh%multipole%rs(l)%val(i)*molecule(nmol)%rho(i)
-                !          print *,&
-                !               molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i),&
-                !               molecule(nmol)%mesh%multipole%rs(l)%val(i),&
-                !               molecule(nmol)%rho(i)
-             end do
-             molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
-                  molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
-                  molecule(nmol)%mesh%dv
-          end do
-       end do
-       do i=molecule(nmol)%mesh%nunactive,molecule(nmol)%mesh%Ntot
-          molecule(nmol)%pot%hartree(i)=0.0
-          do l=0,molecule(nmol)%mesh%multipole%lmax
-             do m=-l,l
-                molecule(nmol)%pot%hartree(i)=&
-                     molecule(nmol)%pot%hartree(i)+&
-                     molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
-                     molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)/&
-                     ((2*l+1)*molecule(nmol)%mesh%node(i)%r**(l+1))
-             end do
-          end do
-          molecule(nmol)%pot%hartree(i)=4*pi*molecule(nmol)%pot%hartree(i)
-!          print *,i,molecule(nmol)%pot%hartree(i)
-       end do
+!        print *,"HHHHHHH"
+!        do l=0,molecule(nmol)%mesh%multipole%lmax
+!           do m=-l,l
+!              molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=0.0
+!              do i=1,molecule(nmol)%mesh%nactive
+!                 molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
+!                      molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)+&
+!                      molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)*&
+!                      molecule(nmol)%mesh%multipole%rs(l)%val(i)*molecule(nmol)%rho(i)
+!                 !          print *,&
+!                 !               molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i),&
+!                 !               molecule(nmol)%mesh%multipole%rs(l)%val(i),&
+!                 !               molecule(nmol)%rho(i)
+!              end do
+!              molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)=&
+!                   molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
+!                   molecule(nmol)%mesh%dv
+!           end do
+!        end do
+!        do i=molecule(nmol)%mesh%nunactive,molecule(nmol)%mesh%Ntot
+!           molecule(nmol)%pot%hartree(i)=0.0
+!           do l=0,molecule(nmol)%mesh%multipole%lmax
+!              do m=-l,l
+!                 molecule(nmol)%pot%hartree(i)=&
+!                      molecule(nmol)%pot%hartree(i)+&
+!                      molecule(nmol)%mesh%multipole%qlm(l)%m(m)%val(1)*&
+!                      molecule(nmol)%mesh%multipole%sph_harm_l(l)%m(m)%val(i)/&
+!                      ((2*l+1)*molecule(nmol)%mesh%node(i)%r**(l+1))
+!              end do
+!           end do
+!           molecule(nmol)%pot%hartree(i)=4*pi*molecule(nmol)%pot%hartree(i)
+! !          print *,i,molecule(nmol)%pot%hartree(i)
+!        end do
 
-       write(filename,'(a)') 'hartree.cube'
-       call save_cube_3D(molecule(nmol)%pot%hartree,filename,molecule(nmol)%mesh)
+!        write(filename,'(a)') 'hartree.cube'
+!        call save_cube_3D(molecule(nmol)%pot%hartree,filename,molecule(nmol)%mesh)
 
 
 
-       print *,molecule(nmol)%mesh%dv*&
-            sum(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val*molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val)
+!        print *,molecule(nmol)%mesh%dv*&
+!             sum(molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val*molecule(nmol)%mesh%multipole%sph_harm_l(1)%m(1)%val)
        
-       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,0,0,0,0)
-       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,0,0)
-       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,1,0)
-       call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,1,0,0)
+!        call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,0,0,0,0)
+!        call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,0,0)
+!        call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,0,1,0)
+!        call integrate_Yl1m1_Yl2m2(molecule(nmol)%mesh,1,1,0,0)
        
        call exit()
     case ("numerov")
@@ -849,7 +852,7 @@ contains
 
 
     call new_mesh(molecule%mesh)
-    call init_pot(molecule%mesh,molecule%pot)
+    call init_pot(molecule)
     call save_potential(param,molecule)
     molecule%wf%nwfc=param%nvecmin   ! number of wfc min to cvg
     if(allocated(molecule%wf%eps))     deallocate(molecule%wf%eps)
