@@ -162,6 +162,7 @@ contains
             molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%wf%nwfc,&
             molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rhotot(molecule(idxmol)%mesh%nactive))
        ! ---------------------------------------------------------------
        !
        !                    SETTING MOLECULE

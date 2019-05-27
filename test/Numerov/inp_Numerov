@@ -33,16 +33,16 @@ set molecule 1 radius 70.0
 set molecule 1 shape cylinder
 set molecule 1 center 0.5 0.5 0.5
 set molecule 1 N 10000
-set molecule 1 norbital 2
+set molecule 1 norbital 3
 set molecule 1 nvec_to_cvg 10
 set molecule 1 ETA 1.0e-12
-set molecule 1 numerov_Z 2.0
+set molecule 1 numerov_Z 3.0
 set molecule 1 numerov_nmax 1
 set molecule 1 hartree .TRUE.
 set molecule 1 exchange .FALSE.
 set molecule 1 mixing 0.5
 create molecule 1
-set molecule 1 occupation 2.0 0.0 
+set molecule 1 occupation 2.0 1.0 
 numerov
 cmd end
 end

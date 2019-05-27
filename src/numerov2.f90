@@ -249,18 +249,18 @@ contains
              !call norm(molecule%mesh,molecule%wf%wfc(:,idxwfc))
              call normsqr(molecule%mesh,molecule%wf%wfc(:,idxwfc))
              call normsqr(molecule%mesh,molecule%wf%wfc(:,idxwfc))
-          end do
-       end do
+          end do ! idxwfc
+       end do  ! iloop
        
-       molecule%numerov%rhoold(idxwfc,:)=molecule%numerov%rho(idxwfc,:)
-       molecule%numerov%rho(idxwfc,:)=0.0
-
+       molecule%numerov%rhoold=molecule%numerov%rho
+       molecule%numerov%rho=0.0
+       molecule%numerov%rhotot=0.0
        do i=1,molecule%wf%nwfc
           if(molecule%wf%occ(i).gt.0.0) then
-             molecule%numerov%rho(idxwfc,:)=molecule%numerov%rho(idxwfc,:)+&
+             molecule%numerov%rhotot=molecule%numerov%rhotot+&
                   molecule%wf%occ(i)*(molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
-             !          molecule%numerov%rho=molecule%numerov%rho+&
-             !               molecule%wf%occ(i)*(2*molecule%wf%l(i)+1)*(molecule%wf%wfc(:,i))**2
+             molecule%numerov%rho(i,:)=molecule%numerov%rhotot-&
+                  (molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
           end if
        end do
        !print *,molecule%numerov%rho
@@ -298,7 +298,7 @@ contains
           if(molecule%param%hartree) then
              call   Hartree_cg_new(molecule,i)
              !molecule%pot%hartree(idxwfc,:)=0.5*molecule%pot%hartree
-             molecule%pot%EHartree(i)=0.5*molecule%mesh%dv*4*pi*&
+             molecule%pot%EHartree(i)=molecule%mesh%dv*4*pi*&
                   sum(molecule%numerov%r*&
                   molecule%numerov%rho(i,:)*&
                   molecule%pot%hartree(i,:))

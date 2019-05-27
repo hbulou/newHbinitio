@@ -221,7 +221,8 @@ module global
   ! ----------------------------------------------------------
   type t_numerov
      double precision,allocatable::Q(:),Vout(:),Vin(:)
-     double precision,allocatable::r(:),rho(:,:),rhoold(:,:)
+     double precision,allocatable::r(:)
+     double precision,allocatable::rho(:,:),rhoold(:,:),rhotot(:)   ! for DFT calculation
      double precision::Z
      integer::nmax
      integer::n_node_bounds(1:2)
