@@ -16,9 +16,7 @@ contains
     if(allocated(molecule%pot%ext))     deallocate(molecule%pot%ext)
     allocate(molecule%pot%ext(molecule%mesh%Ntot))
     if(allocated(molecule%pot%hartree))     deallocate(molecule%pot%hartree)
-    allocate(molecule%pot%hartree(molecule%wf%nwfc,molecule%mesh%Ntot))
-    if(allocated(molecule%pot%Ehartree))     deallocate(molecule%pot%Ehartree)
-    allocate(molecule%pot%Ehartree(molecule%wf%nwfc))
+    allocate(molecule%pot%hartree(molecule%mesh%Ntot))
     if(allocated(molecule%pot%Vx))     deallocate(molecule%pot%Vx)
     allocate(molecule%pot%Vx(molecule%mesh%Ntot))
     molecule%pot%hartree=0.0

@@ -141,7 +141,6 @@ contains
        allocate(molecule(idxmol)%wf%l(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%m(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%wf%occ(molecule(idxmol)%wf%nwfc))
-       allocate(molecule(idxmol)%wf%charge(molecule(idxmol)%wf%nwfc))
        allocate(molecule(idxmol)%rho(molecule(idxmol)%mesh%Ntot))
 
 
@@ -158,11 +157,8 @@ contains
        allocate(molecule(idxmol)%numerov%Vout(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%Vin(molecule(idxmol)%mesh%nactive))
        allocate(molecule(idxmol)%numerov%r(molecule(idxmol)%mesh%nactive))
-       allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%wf%nwfc,&
-            molecule(idxmol)%mesh%nactive))
-       allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%wf%nwfc,&
-            molecule(idxmol)%mesh%nactive))
-       allocate(molecule(idxmol)%numerov%rhotot(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rho(molecule(idxmol)%mesh%nactive))
+       allocate(molecule(idxmol)%numerov%rhoold(molecule(idxmol)%mesh%nactive))
        ! ---------------------------------------------------------------
        !
        !                    SETTING MOLECULE

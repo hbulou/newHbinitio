@@ -82,7 +82,6 @@ contains
              !
              ! ---------------------------------------------------
              
-             molecule%pot%Vx=0.0
              do i=1,molecule%mesh%nactive
                 molecule%pot%ext(i)=-molecule%numerov%Z/molecule%numerov%r(i)+&
                      0.5*lorb*(lorb+1)/molecule%numerov%r(i)**2
@@ -91,15 +90,17 @@ contains
              if(molecule%param%hartree) then
                 do i=1,molecule%mesh%nactive
                    molecule%pot%tot(i)=molecule%pot%tot(i)+&
-                         molecule%pot%hartree(idxwfc,i)/molecule%numerov%r(i)
+                        molecule%pot%hartree(i)/molecule%numerov%r(i)
                 end do
              else
-                molecule%pot%hartree(idxwfc,:)=0.0
+                molecule%pot%hartree=0.0
              end if
              if(molecule%param%exchange) then
                 do i=1,molecule%mesh%nactive
                    molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
                 end do
+             else
+                molecule%pot%Vx=0.0
              end if
 
              ! ---------------------------------------------------
@@ -116,7 +117,8 @@ contains
                 write(1,*) molecule%numerov%r(i),&
                      molecule%pot%tot(i),&
                      molecule%pot%ext(i),&
-                     molecule%pot%hartree(idxwfc,i)/molecule%numerov%r(i)
+                     molecule%pot%hartree(i)/molecule%numerov%r(i),&
+                     molecule%pot%Vx(i)
              end do
              close(1)
 
@@ -251,19 +253,20 @@ contains
              call normsqr(molecule%mesh,molecule%wf%wfc(:,idxwfc))
           end do ! idxwfc
        end do  ! iloop
-       
+
+       ! --------------------------------------------
+       !
+       ! Computing rho
+       !
+       ! --------------------------------------------
        molecule%numerov%rhoold=molecule%numerov%rho
        molecule%numerov%rho=0.0
-       molecule%numerov%rhotot=0.0
        do i=1,molecule%wf%nwfc
           if(molecule%wf%occ(i).gt.0.0) then
-             molecule%numerov%rhotot=molecule%numerov%rhotot+&
+             molecule%numerov%rho=molecule%numerov%rho+&
                   molecule%wf%occ(i)*(molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
-             molecule%numerov%rho(i,:)=molecule%numerov%rhotot-&
-                  (molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
           end if
        end do
-       !print *,molecule%numerov%rho
        
        ! ---------------------------------------------------
        !
@@ -285,47 +288,85 @@ contains
                ',',molecule%wf%l(i),")= ",molecule%wf%eps(i)," Ha",&
                ' occupation= ',molecule%wf%occ(i),' ',2*molecule%wf%l(i)+1,' state(s)'
        end do
+
+
        ! formule 8.1 in"Poisson equation & Hartree potential", Bulou, 20/05/19
-       do i=1,idxwfc
-          molecule%wf%charge(i)=4*pi*molecule%mesh%dv*&
-               sum(molecule%numerov%rho(i,:)*molecule%numerov%r**2)
-          print *,"Charge= ",molecule%wf%charge,nelec
+       molecule%wf%charge=4*pi*molecule%mesh%dv*&
+            sum(molecule%numerov%rho*molecule%numerov%r**2)
+       print *,"Total Charge= ",molecule%wf%charge,nelec
 
-          molecule%numerov%rho(i,:)=molecule%mixing*molecule%numerov%rho(i,:)+&
-            (1.0-molecule%mixing)*molecule%numerov%rhoold(i,:)
+       ! new rho (mixing)
+       molecule%numerov%rho=molecule%mixing*molecule%numerov%rho+&
+            (1.0-molecule%mixing)*molecule%numerov%rhoold
 
-          molecule%pot%EHartree(i)=0.0
-          if(molecule%param%hartree) then
-             call   Hartree_cg_new(molecule,i)
-             !molecule%pot%hartree(idxwfc,:)=0.5*molecule%pot%hartree
-             molecule%pot%EHartree(i)=molecule%mesh%dv*4*pi*&
-                  sum(molecule%numerov%r*&
-                  molecule%numerov%rho(i,:)*&
-                  molecule%pot%hartree(i,:))
-             print *,"Hartree energy= ",molecule%pot%EHartree(i),' Ha',molecule%param%hartree
-          end if
-          print *,"Total energy = ",sum(molecule%wf%occ*molecule%wf%eps)-&
-               molecule%pot%EHartree(i), 'Ha'
-       end do
+       ! Kinetic part
+       molecule%pot%Etotold=molecule%pot%Etot
+       molecule%pot%Etot=0.0
+       molecule%pot%Ek=sum(molecule%wf%occ*molecule%wf%eps)
+       print *,"Kinetic energy= ",molecule%pot%Ek,' Ha =',2*molecule%pot%Ek,' Ry'
+       molecule%pot%Etot=molecule%pot%Etot+molecule%pot%Ek
+
+       ! Hartree part
+       molecule%pot%hartree=0.0
+       molecule%pot%EHartree=0.0
+       if(molecule%param%hartree) then
+          call   Hartree_cg_new(molecule)
+          molecule%pot%hartree=0.5*molecule%pot%hartree
+          molecule%pot%EHartree=0.5*molecule%mesh%dv*4*pi*&
+               sum(molecule%numerov%r*&
+               molecule%numerov%rho*&
+               molecule%pot%hartree)
+          print *,"Hartree energy= ",molecule%pot%EHartree,' Ha =',molecule%param%hartree,&
+               2*molecule%pot%EHartree,' Ry'
+          molecule%pot%Etot=molecule%pot%Etot-molecule%pot%EHartree
+       end if
+       
+       
+       ! Slater exchange potential part
+       ! Based on the exchange energy in a homogeneous electron gas
+       molecule%pot%Vx=0.0
+       molecule%pot%Ex=0.0
+       if(molecule%param%exchange) then
+          molecule%pot%Vx=-(3*molecule%numerov%rho/pi)**(1.0/3.0)
+          molecule%pot%Ex=molecule%mesh%dv*4*pi*&
+               sum(molecule%numerov%r*molecule%numerov%r*&
+               molecule%numerov%rho*&
+               molecule%pot%Vx)
+          print *,"Exchange energy= ",molecule%pot%Ex,' Ha =',2*molecule%pot%Ex,' Ry'
+          molecule%pot%Etot=molecule%pot%Etot-molecule%pot%Ex
+       end if
+
+       if(iloop.gt.1) then
+          print *,"Total energy = ",molecule%pot%Etot,' Ha (',molecule%pot%Etot-molecule%pot%Etotold,')=',&
+               2*molecule%pot%Etot,' Ry (',2*(molecule%pot%Etot-molecule%pot%Etotold),')'
+       else
+          print *,"Total energy = ",molecule%pot%Etot,' Ha'
+       end if
+       print *,molecule%mesh%dv*4*pi*&
+            sum(molecule%numerov%Z*&
+            molecule%numerov%rho*molecule%numerov%r)
+       
+
+
     end do
     call exit()
   end subroutine numerov_new
   ! --------------------------------------------------------------------------------------
-  subroutine Hartree_cg_new(molecule,idxwfc)
+  subroutine Hartree_cg_new(molecule)
     implicit none
     type(t_molecule)::molecule
     double precision,allocatable::b(:)
-    integer :: i,idxwfc
+    integer :: i
     
     ! setting the source
     allocate(b(molecule%mesh%nactive))
-    b=-4*pi*molecule%numerov%r*molecule%numerov%rho(idxwfc,:)
+    b=-4*pi*molecule%numerov%r*molecule%numerov%rho
 
-    molecule%pot%hartree(idxwfc,:)=0.0
+    molecule%pot%hartree=0.0
     b(molecule%mesh%nactive)=b(molecule%mesh%nactive)-&
-         molecule%wf%charge(idxwfc)/molecule%mesh%dx**2
+         molecule%wf%charge/molecule%mesh%dx**2
     
-    call Conjugate_gradient_3D(-b,molecule%pot%hartree(idxwfc,:),&
+    call Conjugate_gradient_3D(-b,molecule%pot%hartree,&
          molecule%mesh%nactive,molecule%mesh%dx,&
          molecule%mesh)    
 
