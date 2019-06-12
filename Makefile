@@ -13,6 +13,8 @@ experiment:
 	cd test/Experiment ; ../../bin/$(EXEC) inp_Experiment
 numerov:
 	cd test/Numerov ; ../../bin/$(EXEC) inp_Numerov
+pseudopotential:
+	cd test/pseudopotential ; ../../bin/$(EXEC) inp_pseudopotential
 doc: Hbinitio.pdf
 	cd doc ; pdflatex Hbinitio.tex
 movie:

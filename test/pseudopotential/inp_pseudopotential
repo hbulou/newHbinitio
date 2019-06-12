@@ -1,0 +1,49 @@
+scheme davidson  !     numerov  
+restart .FALSE.
+prefix 'davidson1D'
+init_wf .TRUE.
+extrapol .FALSE.	
+extrap_add 20
+loopmax 1000
+nvecmin 24
+nvecmax 49
+Nx 1000
+noccstate 1
+nvec_to_cvg 12
+occupation 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ETA 1.0e-5
+box_width 30.0
+box_radius 10.0
+box_shape cylinder
+box_center 0.5 0.5 0.5
+dimension 1
+perturb_intensity 1.0
+perturb_sigma 1.0
+perturb_shape gaussian
+perturb_location 35.0 15.0 0.0
+Zato 1.0
+exchange .FALSE.
+iprint_level 0
+#
+# command part
+#
+set molecule 1 dimension 1
+set molecule 1 width 80.0
+set molecule 1 radius 70.0
+set molecule 1 shape cylinder
+set molecule 1 center 0.5 0.5 0.5
+set molecule 1 N 10000
+set molecule 1 norbital 5
+set molecule 1 nvec_to_cvg 10
+set molecule 1 ETA 1.0e-12
+set molecule 1 numerov_Z 3.0
+set molecule 1 numerov_nmax 2
+set molecule 1 hartree .TRUE.
+set molecule 1 exchange .TRUE.
+set molecule 1 mixing 0.5
+create molecule 1
+set molecule 1 occupation 2.0 1.0 0.0 0.0 0.0 0.0 
+#numerov
+pseudopotential file Cu.psf
+cmd end
+end

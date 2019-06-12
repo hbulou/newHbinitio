@@ -9,6 +9,7 @@ module param_mod
   use FFT_mod
   use tdse_mod
   use numerov_mod_dev
+  use pseudopotential
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -42,6 +43,7 @@ contains
     character (len=1024) :: filename
     double complex,allocatable::in_wfc(:)
     double complex,allocatable::fft_wfc(:)
+    type(t_pseudo),allocatable :: pp(:)
 
     select case (trim(field(1)))
     case("iprint_level") 
@@ -443,6 +445,25 @@ contains
        print *,"Z= ",molecule(nmol)%numerov%Z
        print *,"nmax= ",molecule(nmol)%numerov%nmax
        call       numerov_new(molecule(nmol),syst)
+       call exit()
+    case ("pseudopotential")
+       print *,"----------------------------------"
+       print *,"          PSEUDOPOTENTIAL             "
+       print *,"----------------------------------"
+       allocate(pp(1))
+       print *,"nfield= ",nfield
+       if(nfield.gt.1) then
+          do i=2,nfield
+             if(field(i).eq."file") then
+                read(field(i+1),*) pp(1)%file
+       
+             end if
+          end do
+       end if
+       print *,'pp file= ',trim(pp(1)%file)
+       call read_pp(pp(1))
+       !call       numerov_new(molecule(nmol),syst)
+       !deallocate(pp)
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"

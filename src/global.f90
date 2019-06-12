@@ -256,7 +256,19 @@ module global
      integer::iprint_level
      type(t_molecule),allocatable:: molecule(:)
   end type t_system
-  !------------------------------------------
+  ! -----------------------------------------------------------
+  !
+  !   PSEUDOPOTENTIAL
+  !
+  ! ----------------------------------------------------------
+  type t_pseudo
+     integer::n
+     integer :: lmax,npotu
+     double precision :: a,b,zval
+     double precision,allocatable::r(:)
+     double precision,allocatable::pot(:,:),zv(:)
+     character(len=1024)::file
+  end type t_pseudo
 
 contains
 end module global
