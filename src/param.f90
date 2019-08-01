@@ -444,7 +444,7 @@ contains
        print *,"dx= ",molecule(nmol)%mesh%dx
        print *,"Z= ",molecule(nmol)%numerov%Z
        print *,"nmax= ",molecule(nmol)%numerov%nmax
-       call       numerov_new(molecule(nmol),syst)
+       call       numerov(molecule(nmol),syst)
        call exit()
     case ("pseudopotential")
        print *,"----------------------------------"
@@ -462,8 +462,17 @@ contains
        end if
        print *,'pp file= ',trim(pp(1)%file)
        call read_pp(pp(1))
-       !call       numerov_new(molecule(nmol),syst)
-       !deallocate(pp)
+       print *,"n points: ",pp(1)%n
+       print *,syst%nmol," molecule(s) are defined"
+       if(.not.(allocated(molecule))) then
+          syst%nmol=1
+          allocate(molecule(nmol))
+       end if
+       print *,syst%nmol," molecule(s) are defined"
+       idxmol=syst%nmol
+       molecule(idxmol)%mesh%Nx=pp(1)%n
+ 
+       deallocate(pp)
        call exit()
     case("tdse")
        print *,"---------------------------------------------------------------"

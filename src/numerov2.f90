@@ -10,7 +10,375 @@ contains
   !
   !             Numerov()
   !
+  !
+  ! Ref. about the way to solve the Radial Schrodinger equation :
+  !             * by using the power-series expansion,  (not yet implemented here)
+  !                      -> Salvat F., Mayol R., Comput. Phys. Commun., 62 (1991), pp. 65-79
+  !                      -> Salvat F., Fernandez-Varea J., Comp. Phys. Commu. 240, July 2019, Pages 165-177
+  !                                      
+  !
   ! --------------------------------------------------------------------------------------
+  subroutine numerov(molecule,syst)
+    implicit none
+    type(t_molecule)::molecule
+    type(t_system)::syst
+    integer::i,j,n,iloop
+    double precision::maxpot
+    integer::n_nodes_target,idxwfc,lorb,nwfc,nmax
+    double precision::nelec
+    character (len=1024) :: filename
+    integer::iloop1
+    ! ---------------------------------------------------
+    !
+    ! building the radial mesh
+    !
+    ! ---------------------------------------------------
+
+    do i=1,molecule%mesh%nactive
+       molecule%numerov%r(i)=i*molecule%mesh%dx
+    end do
+
+!    print *,"# numerov > dx=",molecule%mesh%dx,&
+!         " first point @ r=",molecule%numerov%r(1)
+    ! ---------------------------------------------------
+    !
+    ! loop over the wavefunctions l=0,1,2,... and m=-l..+l
+    !
+    ! ---------------------------------------------------
+    nwfc=0
+    nmax=molecule%numerov%nmax
+    do n=1,nmax
+       do lorb=0,n-1
+          nwfc=nwfc+2*lorb+1  ! m=-l --> l
+       end do
+    end do
+    if(nwfc.gt.molecule%wf%nwfc) then
+       print *,"WARNING! the number of wavefunction is too small (should be at least ",nwfc
+       call exit()
+    end if
+
+
+    molecule%pot%hartree=0.0
+    molecule%numerov%rho=0.0
+    nelec=0
+    i=0
+    do n=1,nmax
+       do lorb=0,n-1
+          nwfc=nwfc+2*lorb+1  ! m=-l --> l
+          i=i+1
+          nelec=nelec+molecule%wf%occ(i)*(2*lorb+1)
+       end do
+    end do
+
+
+
+    do iloop=1,20
+       idxwfc=0
+       do n=1,nmax
+          do lorb=0,n-1
+             iloop1=0
+             n_nodes_target=n-lorb
+             idxwfc=idxwfc+1
+             molecule%wf%n(idxwfc)=n
+             molecule%wf%l(idxwfc)=lorb
+             !print *,idxwfc,n_nodes_target,lorb
+             ! ---------------------------------------------------
+             !
+             !  Potential part
+             !
+             ! ---------------------------------------------------
+             
+             do i=1,molecule%mesh%nactive
+                molecule%pot%ext(i)=-molecule%numerov%Z/molecule%numerov%r(i)+&
+                     0.5*lorb*(lorb+1)/molecule%numerov%r(i)**2
+             end do
+             molecule%pot%tot=molecule%pot%ext
+             if(molecule%param%hartree) then
+                do i=1,molecule%mesh%nactive
+                   molecule%pot%tot(i)=molecule%pot%tot(i)+&
+                        molecule%pot%hartree(i)/molecule%numerov%r(i)
+                end do
+             else
+                molecule%pot%hartree=0.0
+             end if
+             if(molecule%param%exchange) then
+                do i=1,molecule%mesh%nactive
+                   molecule%pot%tot(i)=molecule%pot%tot(i)+molecule%pot%Vx(i)
+                end do
+             else
+                molecule%pot%Vx=0.0
+             end if
+
+             ! ---------------------------------------------------
+             !
+             ! saving the potential
+             !
+             ! ---------------------------------------------------
+             write(filename,'(a,i0,a,i0,a)') 'potential_l',lorb,'_',iloop,'.dat'
+             open(unit=1,file=filename,form='formatted',status='unknown')
+             if(syst%iprint_level.eq.1) then
+                print *,'Writing ,',filename
+             end if
+             do i=1,molecule%mesh%nactive
+                write(1,*) molecule%numerov%r(i),&
+                     molecule%pot%tot(i),&
+                     molecule%pot%ext(i),&
+                     molecule%pot%hartree(i)/molecule%numerov%r(i),&
+                     molecule%pot%Vx(i)
+             end do
+             close(1)
+             
+             print *,"------------------------------------------------------------------"
+             print *,'|   iloop=',iloop
+             print *,'|   n_nodes_target=',n_nodes_target
+             print *,'|   lorb=',lorb
+             print *,'|   idxwfc=',idxwfc
+             print *,'|   potential=',minval(molecule%pot%tot),&
+                  min(molecule%pot%tot(molecule%mesh%nactive),maxval(molecule%pot%tot))
+             print *,"------------------------------------------------------------------"
+             if(syst%iprint_level.eq.1) then
+                print *,"Searching the right energy for getting ",n_nodes_target," node(s)"
+             end if
+             
+             call solve_schroedinger_equation(molecule,n_nodes_target,syst,iloop1,idxwfc,iloop)
+
+             
+          end do ! l
+       end do  ! n
+
+       ! --------------------------------------------
+       !
+       ! Computing rho
+       !
+       ! --------------------------------------------
+       molecule%numerov%rhoold=molecule%numerov%rho
+       molecule%numerov%rho=0.0
+       do i=1,molecule%wf%nwfc
+          if(molecule%wf%occ(i).gt.0.0) then
+             molecule%numerov%rho=molecule%numerov%rho+&
+                  molecule%wf%occ(i)*(molecule%wf%wfc(:,i)/molecule%numerov%r)**2/(4*pi)
+          end if
+       end do
+       
+       ! ---------------------------------------------------
+       !
+       ! saving the wavefunctions
+       !
+       ! ---------------------------------------------------
+       write(filename,'(a,i0,a)') 'wfc',iloop,'.dat'
+       !print *,"Writing ",filename
+       open(unit=1,file=filename,form='formatted',status='unknown')
+       do i=1,molecule%mesh%nactive
+          write(1,*) molecule%numerov%r(i),&
+               ((molecule%wf%wfc(i,j)/molecule%mesh%node(i)%q(1)),j=1,idxwfc)!,&
+       end do
+       close(1)
+
+       write(*,'(a4,a2,a1,a2,a2)') "eps(","n",',',"l",")"
+       do i=1,idxwfc
+          write(*,'(a4,i2,a1,i2,a3,e12.6,a3,a12,f4.2,a1,i2,a8)') "eps(",molecule%wf%n(i),&
+               ',',molecule%wf%l(i),")= ",molecule%wf%eps(i)," Ha",&
+               ' occupation= ',molecule%wf%occ(i),' ',2*molecule%wf%l(i)+1,' state(s)'
+       end do
+
+
+       ! formule 8.1 in"Poisson equation & Hartree potential", Bulou, 20/05/19
+       molecule%wf%charge=4*pi*molecule%mesh%dv*&
+            sum(molecule%numerov%rho*molecule%numerov%r**2)
+       print *,"Total Charge= ",molecule%wf%charge,nelec
+
+       ! new rho (mixing)
+       molecule%numerov%rho=molecule%mixing*molecule%numerov%rho+&
+            (1.0-molecule%mixing)*molecule%numerov%rhoold
+
+       ! Kinetic part
+       molecule%pot%Etotold=molecule%pot%Etot
+       molecule%pot%Etot=0.0
+       molecule%pot%Ek=sum(molecule%wf%occ*molecule%wf%eps)
+       print *,"Kinetic energy= ",molecule%pot%Ek,' Ha =',2*molecule%pot%Ek,' Ry'
+       molecule%pot%Etot=molecule%pot%Etot+molecule%pot%Ek
+
+       ! Hartree part
+       molecule%pot%hartree=0.0
+       molecule%pot%EHartree=0.0
+       if(molecule%param%hartree) then
+          call   Hartree_cg_new(molecule)
+          molecule%pot%hartree=0.5*molecule%pot%hartree
+          molecule%pot%EHartree=0.5*molecule%mesh%dv*4*pi*&
+               sum(molecule%numerov%r*&
+               molecule%numerov%rho*&
+               molecule%pot%hartree)
+          print *,"Hartree energy= ",molecule%pot%EHartree,' Ha =',molecule%param%hartree,&
+               2*molecule%pot%EHartree,' Ry'
+          molecule%pot%Etot=molecule%pot%Etot-molecule%pot%EHartree
+       end if
+       
+       
+       ! Slater exchange potential part
+       ! Based on the exchange energy in a homogeneous electron gas
+       molecule%pot%Vx=0.0
+       molecule%pot%Ex=0.0
+       if(molecule%param%exchange) then
+          molecule%pot%Vx=-(3*molecule%numerov%rho/pi)**(1.0/3.0)
+          molecule%pot%Ex=molecule%mesh%dv*4*pi*&
+               sum(molecule%numerov%r*molecule%numerov%r*&
+               molecule%numerov%rho*&
+               molecule%pot%Vx)
+          print *,"Exchange energy= ",molecule%pot%Ex,' Ha =',2*molecule%pot%Ex,' Ry'
+          molecule%pot%Etot=molecule%pot%Etot-molecule%pot%Ex
+       end if
+
+       if(iloop.gt.1) then
+          print *,"Total energy = ",molecule%pot%Etot,' Ha (',molecule%pot%Etot-molecule%pot%Etotold,')=',&
+               2*molecule%pot%Etot,' Ry (',2*(molecule%pot%Etot-molecule%pot%Etotold),')'
+       else
+          print *,"Total energy = ",molecule%pot%Etot,' Ha'
+       end if
+       print *,molecule%mesh%dv*4*pi*&
+            sum(molecule%numerov%Z*&
+            molecule%numerov%rho*molecule%numerov%r)
+       
+
+
+    end do
+    call exit()
+  end subroutine numerov
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine solve_schroedinger_equation(molecule,n_nodes_target,syst,iloop1,idxwfc,iloop)
+    implicit none
+    type(t_molecule)::molecule
+    double precision::maxpot,fac,eps,sqrd,diff,k
+    integer::n_nodes,n_nodes_target,iloop1,i,idxwfc,iloop
+    type(t_system)::syst
+    character (len=1024) :: filename    
+    logical,parameter :: outward=.TRUE.,inward=.FALSE.
+    
+    sqrd=molecule%mesh%dx**2    
+    maxpot=min(molecule%pot%tot(molecule%mesh%nactive),maxval(molecule%pot%tot))
+    fac=0.5
+    eps=((1.0-fac)*minval(molecule%pot%tot)+fac*maxpot)
+
+    call compute_Q_new(molecule%numerov%Q,&
+         molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+    
+    call find_classical_region(molecule)
+
+
+    molecule%numerov%Vout(1)=0.001
+    call numerov_integrate(outward,&
+         molecule%numerov%Q,&
+         molecule%numerov%Vout,&
+         molecule%mesh%nactive,&
+         sqrd)
+    n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+    molecule%numerov%n_node_bounds(1)=n_nodes
+    molecule%numerov%n_node_bounds(2)=n_nodes
+    if(allocated(molecule%numerov%list_nrj_node)) deallocate(molecule%numerov%list_nrj_node)
+    allocate(molecule%numerov%list_nrj_node(1:2,&
+         molecule%numerov%n_node_bounds(1):molecule%numerov%n_node_bounds(2)))
+    molecule%numerov%list_nrj_node(1,n_nodes)=eps
+    molecule%numerov%list_nrj_node(2,n_nodes)=eps
+
+    do while((molecule%numerov%n_node_bounds(1).gt.n_nodes_target).or.&
+         (molecule%numerov%n_node_bounds(2).lt.(n_nodes_target+1)))
+       if(n_nodes.gt.n_nodes_target)     eps=0.5*(eps+minval(molecule%pot%tot))
+       if(n_nodes.lt.(n_nodes_target+1))     eps=0.5*(eps+maxpot) 
+       call compute_Q_new(molecule%numerov%Q,&
+            molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+       !print *,'1 - nl= ',n,lorb
+       call find_classical_region(molecule)
+       molecule%numerov%Vout(1)=0.001
+       call numerov_integrate(outward,&
+            molecule%numerov%Q,&
+            molecule%numerov%Vout,&
+            molecule%mesh%nactive,&
+            sqrd)
+       n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+       call update_list_nrj_node(eps,n_nodes,molecule)
+
+       if(syst%iprint_level.eq.1) then
+          print *,iloop1," - eps=",eps,"n_nodes=",n_nodes
+          print *,"number min of nodes: ",molecule%numerov%n_node_bounds(1),&
+               "number max of nodes: ",molecule%numerov%n_node_bounds(2)
+          do i=molecule%numerov%n_node_bounds(1),molecule%numerov%n_node_bounds(2)
+             print *,molecule%numerov%list_nrj_node(1,i),molecule%numerov%list_nrj_node(2,i)
+          end do
+       end if
+       iloop1=iloop1+1
+       if(iloop1.gt.20) then
+          print *,"WARNING - Pb of convergence"
+          write(filename,'(a,i0,a)') 'wfc_warning',iloop,'.dat'
+          print *,"Writing ",trim(filename)
+          open(unit=1,file=trim(filename),form='formatted',status='unknown')
+          do i=1,molecule%mesh%nactive
+             write(1,*) molecule%numerov%r(i),molecule%numerov%Vout(i)/molecule%numerov%r(i)
+          end do
+          close(1)
+          call exit()
+       end if
+    end do
+
+
+    diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
+    if(syst%iprint_level.eq.1) then
+       print *,"The energy to get ",n_nodes_target," is in the range [",&
+            molecule%numerov%list_nrj_node(1,n_nodes_target),",",&
+            molecule%numerov%list_nrj_node(1,n_nodes_target+1),&
+            "] (diff= ",diff,")"
+
+
+       print *,"Now, we're going to reduce this range so that to reach a difference smaller than ",&
+            molecule%cvg%ETA
+    end if
+    do while(diff.gt.molecule%cvg%ETA)
+       eps=0.5*(molecule%numerov%list_nrj_node(2,n_nodes_target)+&
+            molecule%numerov%list_nrj_node(1,n_nodes_target+1)) 
+       call compute_Q_new(molecule%numerov%Q,&
+            molecule%mesh%nactive,eps,molecule%numerov%r,molecule%pot%tot)
+       !print *,'2 - nl= ',n,lorb
+       call find_classical_region(molecule)
+       molecule%numerov%Vout(1)=0.001
+       call numerov_integrate(outward,&
+            molecule%numerov%Q,&
+            molecule%numerov%Vout,&
+            molecule%mesh%nactive,&
+            sqrd)
+       n_nodes=count_nodes(molecule%numerov%Vout,molecule%mesh%nactive)
+       call update_list_nrj_node(eps,n_nodes,molecule)
+       diff=molecule%numerov%list_nrj_node(1,n_nodes_target+1)-molecule%numerov%list_nrj_node(2,n_nodes_target)
+       if(syst%iprint_level.eq.1) then
+          print *,"           eps=",eps,"n_nodes=",n_nodes,"diff= ",diff
+          !             print *, molecule%numerov%list_nrj_node
+       end if
+    end do
+
+    k=sqrt(molecule%pot%tot(molecule%mesh%nactive)-eps)
+    molecule%numerov%Vin(molecule%mesh%nactive)=exp(-k*molecule%mesh%node(molecule%mesh%nactive)%q(1))
+    call numerov_integrate(inward,&
+         molecule%numerov%Q,&
+         molecule%numerov%Vin,&
+         molecule%mesh%nactive,&
+         sqrd)
+
+    !print *,"Saving the Numerov wavefunction into wfc(",idxwfc,")"
+    molecule%wf%eps(idxwfc)=eps
+    do i=1,molecule%numerov%classical_region(2,1)
+       molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vout(i)/molecule%numerov%Vout(molecule%numerov%classical_region(2,1))
+    end do
+    do i=molecule%numerov%classical_region(2,1)+1,molecule%mesh%nactive
+       molecule%wf%wfc(i,idxwfc)=molecule%numerov%Vin(i)/molecule%numerov%Vin(molecule%numerov%classical_region(2,1))
+    end do
+    !call norm(molecule%mesh,molecule%wf%wfc(:,idxwfc))
+    call normsqr(molecule%mesh,molecule%wf%wfc(:,idxwfc))
+    call normsqr(molecule%mesh,molecule%wf%wfc(:,idxwfc))
+  end subroutine solve_schroedinger_equation
+
+
+
+! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+  
   subroutine numerov_new(molecule,syst)
     implicit none
     type(t_molecule)::molecule

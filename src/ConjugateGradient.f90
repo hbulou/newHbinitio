@@ -96,6 +96,13 @@ contains
   ! 
   ! --------------------------------------------------------------------------------------
   subroutine Conjugate_gradient_3D(b,x,n,h,m)
+    ! subroutine to solve laplacian(|x>)=|b>
+    ! INPUT:
+    !    n = n point in |x>
+    !    h = dx
+    !    m = mesh
+    !
+    !
     implicit none
     double precision::b(:),x(:)
     integer::n
