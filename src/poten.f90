@@ -8,6 +8,42 @@ contains
   !             init_pot()
   !
   ! --------------------------------------------------------------------------------------
+  subroutine init_pot_new(molecule)
+    implicit none
+    type(t_molecule)::molecule
+
+    ! external potential (ion, bias, ...)
+    if(allocated(molecule%pot%ext))     deallocate(molecule%pot%ext)
+    allocate(molecule%pot%ext(molecule%mesh%Ntot))
+    molecule%pot%ext=0.0
+    ! Hartree potential
+    if(allocated(molecule%pot%hartree))     deallocate(molecule%pot%hartree)
+    allocate(molecule%pot%hartree(molecule%mesh%Ntot))
+    molecule%pot%hartree=0.0
+    ! Exchange potential
+    if(allocated(molecule%pot%Vx))     deallocate(molecule%pot%Vx)
+    allocate(molecule%pot%Vx(molecule%mesh%Ntot))
+    molecule%pot%Vx=0.0
+    ! Perturbation
+    if(allocated(molecule%pot%perturb))     deallocate(molecule%pot%perturb)
+    allocate(molecule%pot%perturb(molecule%mesh%Ntot))
+    molecule%pot%perturb=0.0
+    ! Total potential
+    if(allocated(molecule%pot%tot))     deallocate(molecule%pot%tot)
+    allocate(molecule%pot%tot(molecule%mesh%Ntot))
+    molecule%pot%tot=0.0
+    
+
+    !call Vext2(molecule%mesh,molecule%pot%ext)
+    !call Vperturb(molecule%mesh,molecule%pot)
+    !    molecule%pot%tot=molecule%pot%ext+&
+    !         molecule%pot%hartree !+molecule%pot%perturb
+  end subroutine init_pot_new
+    ! --------------------------------------------------------------------------------------
+  !
+  !             init_pot()
+  !
+  ! --------------------------------------------------------------------------------------
   subroutine init_pot(molecule)
     implicit none
     type(t_molecule)::molecule
@@ -31,79 +67,6 @@ contains
 !    molecule%pot%tot=molecule%pot%ext+&
 !         molecule%pot%hartree !+molecule%pot%perturb
   end subroutine init_pot
-  ! --------------------------------------------------------------------------------------
-  !
-  !              Vext()
-  !
-  ! --------------------------------------------------------------------------------------
-  subroutine Vext(m,pot_ext)
-    implicit none
-    type(t_mesh) :: m
-    double precision :: pot_ext(:)
-    double precision :: pts(3),rsqr
-    
-    !    character (len=1024) :: filename
-    integer :: i,j,k,nn
-    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !
-    !           3D
-    !
-    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if(m%dim.eq.3) then
-       do k=1,m%Nz
-          pts(3)=k*m%dz
-          do i=1,m%Nx
-             pts(1)=i*m%dx
-             do j=1,m%Ny
-                pts(2)=j*m%dy
-                rsqr=(pts(1)-m%box%center(1))**2&
-                     +(pts(2)-m%box%center(2))**2&
-                     +(pts(3)-m%box%center(3))**2
-                nn=j+(i-1)*m%Ny+(k-1)*m%Ny*m%Nx
-!                pot_ext(nn)=0.5*1.0*rsqr
-                pot_ext(nn)=-1.0/sqrt(rsqr)
-             end do
-          end do
-       end do
-    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !
-    !           2D
-    !
-    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    else if(m%dim.eq.2) then
-       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
-       do i=1,m%Nx
-          pts(1)=i*m%dx
-          do j=1,m%Ny
-             pts(2)=j*m%dy
-             rsqr=(pts(1)-m%box%center(1))**2&
-                  +(pts(2)-m%box%center(2))**2
-             nn=j+(i-1)*m%Ny
-             pot_ext(nn)=0.5*1.0*rsqr
-             write(1,*) a02ang*pts(1),a02ang*pts(2),Ha2eV*pot_ext(nn)
-          end do
-       end do
-       close(1)
-       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       !
-       !           1D
-       !
-       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    else    if(m%dim.eq.1) then
-       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
-       do i=1,m%Nx
-          pts(1)=i*m%dx
-          rsqr=(pts(1)-m%box%center(1))**2
-          pot_ext(i)=.5*1.0*rsqr
-          write(1,*) a02ang*pts(1),Ha2eV*pot_ext(i)
-       end do
-       close(1)
-    else
-       print *,' STOP in Vext(): dimension=',m%dim,' not yet implemented!'
-       stop
-    end if
-       !stop
-  end subroutine Vext
   ! --------------------------------------------------------------------------------------
   !
   !              Vext2()
@@ -252,5 +215,99 @@ contains
     write(1,*) "&"
     close(1)
   end subroutine save_potential
+
+
+  subroutine save_potential_new(filename,molecule)
+    implicit none
+    type(t_param)::param
+    type(t_molecule)::molecule
+
+    integer::nn
+    character (len=1024) :: filename
+    open(unit=1,file=filename,form='formatted',status='unknown')
+    write(1,*) "@with g0"
+    write(1,*) '@    xaxis  label "x (ang.)"'
+    write(1,*) '@    yaxis  label "Energy (eV)"'
+    write(1,*) "@target G0.S0"
+    write(1,*) "@type xy"
+    do nn=1,molecule%mesh%nactive
+       write(1,*) molecule%mesh%node(nn)%q(1),molecule%pot%ext(nn)
+    end do
+    write(1,*) "&"
+    close(1)
+  end subroutine save_potential_new
+  ! --------------------------------------------------------------------------------------
+  !
+  !              Vext()
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine Vext(m,pot_ext)
+    implicit none
+    type(t_mesh) :: m
+    double precision :: pot_ext(:)
+    double precision :: pts(3),rsqr
+    
+    !    character (len=1024) :: filename
+    integer :: i,j,k,nn
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !
+    !           3D
+    !
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if(m%dim.eq.3) then
+       do k=1,m%Nz
+          pts(3)=k*m%dz
+          do i=1,m%Nx
+             pts(1)=i*m%dx
+             do j=1,m%Ny
+                pts(2)=j*m%dy
+                rsqr=(pts(1)-m%box%center(1))**2&
+                     +(pts(2)-m%box%center(2))**2&
+                     +(pts(3)-m%box%center(3))**2
+                nn=j+(i-1)*m%Ny+(k-1)*m%Ny*m%Nx
+!                pot_ext(nn)=0.5*1.0*rsqr
+                pot_ext(nn)=-1.0/sqrt(rsqr)
+             end do
+          end do
+       end do
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !
+    !           2D
+    !
+    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    else if(m%dim.eq.2) then
+       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
+       do i=1,m%Nx
+          pts(1)=i*m%dx
+          do j=1,m%Ny
+             pts(2)=j*m%dy
+             rsqr=(pts(1)-m%box%center(1))**2&
+                  +(pts(2)-m%box%center(2))**2
+             nn=j+(i-1)*m%Ny
+             pot_ext(nn)=0.5*1.0*rsqr
+             write(1,*) a02ang*pts(1),a02ang*pts(2),Ha2eV*pot_ext(nn)
+          end do
+       end do
+       close(1)
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       !
+       !           1D
+       !
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    else    if(m%dim.eq.1) then
+       open(unit=1,file="pot_ext.dat",form='formatted',status='unknown')
+       do i=1,m%Nx
+          pts(1)=i*m%dx
+          rsqr=(pts(1)-m%box%center(1))**2
+          pot_ext(i)=.5*1.0*rsqr
+          write(1,*) a02ang*pts(1),Ha2eV*pot_ext(i)
+       end do
+       close(1)
+    else
+       print *,' STOP in Vext(): dimension=',m%dim,' not yet implemented!'
+       stop
+    end if
+       !stop
+  end subroutine Vext
 
 end module poten

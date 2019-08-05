@@ -42,6 +42,7 @@ program Hbinitio
   !  call mpi_init(ierr )
   !  call MPI_COMM_RANK (MPI_COMM_WORLD, my_id, ierr)
   !  call MPI_COMM_SIZE (MPI_COMM_WORLD, num_procs, ierr)
+
   call read_param(syst)
   
   

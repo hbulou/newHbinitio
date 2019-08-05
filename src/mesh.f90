@@ -88,6 +88,7 @@ contains
     end do
 
     call set_nodes(mesh)
+    print *,"#DBG ",mesh%nactive
     ! 2*mesh%dim=2  @1D
     ! 2*mesh%dim=4  @2D
     ! 2*mesh%dim=6  @3D
@@ -120,6 +121,141 @@ contains
     call compute_list_neighbors(mesh)
     call cart2sph(mesh)
   end subroutine new_mesh
+  ! -----------------------------------------------
+  !
+  !       new_mesh(m)
+  !
+  ! -----------------------------------------------
+  subroutine new_mesh_new(molecule)
+    implicit none
+    type(t_molecule)::molecule
+    integer::i,j
+    select case(molecule%mesh%dim)
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       !
+       !                3D
+       !
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    case(3)
+       molecule%mesh%Ny=molecule%mesh%Nx
+       molecule%mesh%Nz=molecule%mesh%Nx
+       molecule%mesh%dx=molecule%mesh%box%width/(molecule%mesh%Nx+1)
+       molecule%mesh%dy=molecule%mesh%box%width/(molecule%mesh%Ny+1)
+       molecule%mesh%dz=molecule%mesh%box%width/(molecule%mesh%Nz+1)
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       !
+       !                2D
+       !
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    case(2)
+       molecule%mesh%Ny=molecule%mesh%Nx
+       molecule%mesh%Nz=1
+       molecule%mesh%dx=molecule%mesh%box%width/(molecule%mesh%Nx+1)
+       molecule%mesh%dy=molecule%mesh%box%width/(molecule%mesh%Ny+1)
+       molecule%mesh%dz=1.0
+    case(1)
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       !
+       !                1D
+       !
+       ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       molecule%mesh%Ny=1
+       molecule%mesh%Nz=1
+       molecule%mesh%dx=molecule%mesh%box%width/(molecule%mesh%Nx+1)
+       molecule%mesh%dy=1.0
+       molecule%mesh%dz=1.0
+    case default
+       print *,' STOP in new_mesh(): dimension=',molecule%mesh%dim,' not yet implemented!'
+       stop
+    end select
+    molecule%mesh%dv=molecule%mesh%dx*molecule%mesh%dy*molecule%mesh%dz
+    print *,"# mesh > dv=",molecule%mesh%dv
+    ! -------------------------------------------------------------------------------
+    !
+    ! from now, we deal with the nodes belonging to mesh
+    
+    molecule%mesh%Ntot=molecule%mesh%Nx*molecule%mesh%Ny*molecule%mesh%Nz ! total number of nodes (active + unactive)
+    !    allocate(mesh%n_neighbors(mesh%N))
+    if(allocated(molecule%mesh%node)) deallocate(molecule%mesh%node)
+    allocate(molecule%mesh%node(molecule%mesh%Ntot))
+
+    molecule%mesh%multipole%lmax=2
+    molecule%mesh%multipole%mmax=(molecule%mesh%multipole%lmax+1)**2
+
+    if(allocated(molecule%mesh%multipole%rs)) deallocate(molecule%mesh%multipole%rs)
+    allocate(molecule%mesh%multipole%rs(0:molecule%mesh%multipole%lmax))
+
+    if(allocated(molecule%mesh%multipole%qlm)) deallocate(molecule%mesh%multipole%qlm)
+    allocate(molecule%mesh%multipole%qlm(0:molecule%mesh%multipole%lmax))
+    if(allocated(molecule%mesh%multipole%sph_harm_l)) deallocate(molecule%mesh%multipole%sph_harm_l)
+    allocate(molecule%mesh%multipole%sph_harm_l(0:molecule%mesh%multipole%lmax))
+    do i=0,molecule%mesh%multipole%lmax
+       allocate(molecule%mesh%multipole%rs(i)%val(molecule%mesh%Ntot))
+       allocate(molecule%mesh%multipole%qlm(i)%m(-i:i))
+       allocate(molecule%mesh%multipole%sph_harm_l(i)%m(-i:i))
+       do j=-i,i
+          allocate(molecule%mesh%multipole%sph_harm_l(i)%m(j)%val(molecule%mesh%Ntot))
+          allocate(molecule%mesh%multipole%qlm(i)%m(j)%val(1))
+       end do
+    end do
+
+
+    ! setting the list of neighbor nodes for each node; it depends on the approximatin
+    ! level for the derivatives:
+    !      molecule%approx%k=1 -> +/- 1
+    !                                          2 -> +/- 2
+    !                                          ... see Varga & Karman p14
+    do i=1,molecule%mesh%Ntot
+       allocate(molecule%mesh%node(i)%list_neighbors(&
+            2*molecule%approx%k*&
+            molecule%mesh%dim+1)) !
+       allocate(molecule%mesh%node(i)%idx_FD_coeff(&
+            2*molecule%approx%k*&
+            molecule%mesh%dim+1)) !
+
+       molecule%mesh%node(i)%list_neighbors(:)=0
+       molecule%mesh%node(i)%n_neighbors=0
+       allocate(molecule%mesh%node(i)%list_bound(2*molecule%approx%k*&
+            molecule%mesh%dim)) !
+       allocate(molecule%mesh%node(i)%idx_FD_coeff_bound(2*molecule%approx%k*&
+            molecule%mesh%dim)) !
+       molecule%mesh%node(i)%list_bound(:)=0
+       molecule%mesh%node(i)%n_bound=0
+    end do
+
+    call set_nodes(molecule%mesh)
+    ! 2*molecule%mesh%dim=2  @1D
+    ! 2*molecule%mesh%dim=4  @2D
+    ! 2*molecule%mesh%dim=6  @3D
+    !allocate(molecule%mesh%list_neighbors(molecule%mesh%N,2*molecule%mesh%dim)) !
+    !molecule%mesh%list_neighbors(:,:)=0
+    !molecule%mesh%n_neighbors(:)=0
+    ! n_bound -> number of inactive neighbors of a point
+    ! default = 0
+    ! max = 3 (corner)
+    if(allocated(molecule%mesh%n_bound))     deallocate(molecule%mesh%n_bound)
+    allocate(molecule%mesh%n_bound(molecule%mesh%Ntot))
+    molecule%mesh%n_bound(:)=0
+    ! list_bound -> idx of the inactive neighbors. It corresponds to
+    !                       bound(:)
+    if(allocated(molecule%mesh%list_bound))      deallocate(molecule%mesh%list_bound) !
+    allocate(molecule%mesh%list_bound(molecule%mesh%Ntot,3)) !
+    molecule%mesh%list_bound(:,:)=0
+    ! number of element in the boundary surface
+    molecule%mesh%nbound=8+4*(molecule%mesh%Nx+molecule%mesh%Ny+molecule%mesh%Nz)+&
+         2*(molecule%mesh%Nx*molecule%mesh%Ny+molecule%mesh%Nx*molecule%mesh%Nz+&
+         molecule%mesh%Ny*molecule%mesh%Nz)
+    print *,'new_molecule%mesh > nbound=',molecule%mesh%nbound
+    molecule%mesh%nbound= 2*(molecule%mesh%Nx*molecule%mesh%Ny+molecule%mesh%Nx*molecule%mesh%Nz+&
+         molecule%mesh%Ny*molecule%mesh%Nz)
+    print *,'new_molecule%mesh > nbound=',molecule%mesh%nbound
+    if(allocated(molecule%mesh%bound))     deallocate(molecule%mesh%bound)
+    allocate(molecule%mesh%bound(molecule%mesh%nbound))
+
+
+    call compute_list_neighbors_new(molecule)
+    call cart2sph(molecule%mesh)
+  end subroutine new_mesh_new
   ! -------------------------------------------------------------------------------------------------------------------
   !
   !                          set_idx_list(mesh)
@@ -140,7 +276,7 @@ contains
     logical::CompDomain
     character (len=1024) :: filename
     
-    print *," Starting set_nodes()"
+    print *,"# set_nodes> Starting set_nodes()"
     if(allocated(mesh%ijk_to_idx))     deallocate(mesh%ijk_to_idx)
     allocate(mesh%ijk_to_idx(mesh%Nx,mesh%Ny,mesh%Nz))
     mesh%nactive=0
@@ -173,7 +309,7 @@ contains
                      CompDomain=.TRUE.
              case default
                 !                   else
-                print *,' STOP in set_idx_list(): undefined ',mesh%box%shape,'  shape!'
+                print *,'# set_nodes> STOP in set_idx_list(): undefined ',mesh%box%shape,'  shape!'
                 stop
                    !                end if
              end select
@@ -434,6 +570,217 @@ contains
     print *,"# n usefull unactive nodes = ",m%n_usefull_unactive
 !    stop
   end subroutine compute_list_neighbors
+  ! -----------------------------------------------
+  !
+  !        compute_list_neighbors_new(m)
+  !
+  ! -----------------------------------------------
+  subroutine compute_list_neighbors_new(molecule)
+    implicit none
+    type(t_molecule) :: molecule
+    integer::i,j,k,nn,idx,ii,jj,kk
+
+    if(molecule%mesh%dim.eq.3) then   ! 3D
+       do nn=1,molecule%mesh%nactive
+          i=molecule%mesh%node(nn)%i
+          j=molecule%mesh%node(nn)%j
+          k=molecule%mesh%node(nn)%k
+
+
+          do ii=-molecule%approx%k,molecule%approx%k
+             if(((i+ii).ge.1).and.((i+ii).le.molecule%mesh%Nx)) then
+                !                print *,"ERROR: unactive area along x too small "
+                !                call exit()
+                !             end if
+                if(.not.(ii.eq.0)) then
+                   if(molecule%mesh%ijk_to_idx(i+ii,j,k)%active) then
+                      molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                      molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=&
+                           molecule%mesh%ijk_to_idx(i+ii,j,k)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_neighbors)=ii
+                   else
+                      molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                      molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=&
+                           molecule%mesh%ijk_to_idx(i+ii,j,k)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_bound)=ii
+                      molecule%mesh%node(molecule%mesh%ijk_to_idx(i+ii,j,k)%n)%usefull_unactive=.TRUE.
+                   end if
+                end if
+             end if
+          end do
+          do ii=-molecule%approx%k,molecule%approx%k
+             if(((j+ii).ge.1).and.((j+ii).le.molecule%mesh%Ny)) then
+                !                print *,"ERROR: unactive area along y too small "
+                !               call exit()
+                !           end if
+                if(.not.(ii.eq.0)) then
+                   if(molecule%mesh%ijk_to_idx(i,j+ii,k)%active) then
+                      molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                      molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=&
+                           molecule%mesh%ijk_to_idx(i,j+ii,k)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_neighbors)=ii
+                   else
+                      molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                      molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=&
+                           molecule%mesh%ijk_to_idx(i,j+ii,k)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_bound)=ii
+                      molecule%mesh%node(molecule%mesh%ijk_to_idx(i,j+ii,k)%n)%usefull_unactive=.TRUE.
+                   end if
+                end if
+             end if
+          end do
+          
+          do ii=-molecule%approx%k,molecule%approx%k
+             if(((k+ii).ge.1).and.((k+ii).le.molecule%mesh%Nz)) then
+                !                print *,"ERROR: unactive area along z too small "
+                !                call exit()
+                !             end if
+                if(.not.(ii.eq.0)) then
+                   if(molecule%mesh%ijk_to_idx(i,j,k+ii)%active) then
+                      molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                      molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=&
+                           molecule%mesh%ijk_to_idx(i,j,k+ii)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_neighbors)=ii
+                   else
+                      molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                      molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=&
+                           molecule%mesh%ijk_to_idx(i,j,k+ii)%n
+                      molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_bound)=ii
+                      molecule%mesh%node(molecule%mesh%ijk_to_idx(i,j,k+ii)%n)%usefull_unactive=.TRUE.
+                   end if
+                end if
+             end if
+          end do
+
+!          print *,molecule%mesh%node(nn)%n_neighbors
+       end do
+       
+!       call exit()
+    !else
+     !        do ii=1,molecule%approx%k
+      !          if(.not.(molecule%mesh%ijk_to_idx(i-ii,j,k)%%active)) then
+       !            molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+        !           molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i-ii,j,k)%n
+         !          molecule%mesh%node(molecule%mesh%ijk_to_idx(i-ii,j,k)%n)%usefull_unactive=.TRUE.
+         !       end if
+         !    end do
+         ! end if
+
+    else    if(molecule%mesh%dim.eq.2) then       ! 2D
+       print *,"STOP in mesh.f90 line 654 - to be implemented as for 3D case"
+       call exit()
+       k=1
+       do nn=1,molecule%mesh%nactive
+          i=molecule%mesh%node(nn)%i
+          j=molecule%mesh%node(nn)%j
+          if(i.gt.1) then
+             if(molecule%mesh%ijk_to_idx(i-1,j,k)%active) then
+                molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i-1,j,k)%n
+             else
+                molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i-1,j,k)%n
+                molecule%mesh%node(molecule%mesh%ijk_to_idx(i-1,j,k)%n)%usefull_unactive=.TRUE.
+             end if
+          end if
+          if(i.lt.molecule%mesh%Nx) then
+             if(molecule%mesh%ijk_to_idx(i+1,j,k)%active) then
+                molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i+1,j,k)%n
+             else
+                molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i+1,j,k)%n
+                molecule%mesh%node(molecule%mesh%ijk_to_idx(i+1,j,k)%n)%usefull_unactive=.TRUE.
+             end if
+          end if
+          if(j.gt.1) then
+             if(molecule%mesh%ijk_to_idx(i,j-1,k)%active) then
+                molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i,j-1,k)%n
+             else
+                molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i,j-1,k)%n
+                molecule%mesh%node(molecule%mesh%ijk_to_idx(i-1,j,k)%n)%usefull_unactive=.TRUE.
+             end if
+          end if
+          if(j.lt.molecule%mesh%Ny) then
+             if(molecule%mesh%ijk_to_idx(i,j+1,k)%active) then
+                molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i,j+1,k)%n
+             else
+                molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i,j+1,k)%n
+                molecule%mesh%node(molecule%mesh%ijk_to_idx(i,j+1,k)%n)%usefull_unactive=.TRUE.
+             end if
+          end if
+       end do
+       else if(molecule%mesh%dim.eq.1) then      ! 1D
+!       print *,"STOP in mesh.f90 line 654 - to be implemented as for 3D case"
+!       call exit()
+          do nn=1,molecule%mesh%nactive
+             i=molecule%mesh%node(nn)%i
+             k=1
+             j=1
+             do ii=-molecule%approx%k,molecule%approx%k
+                if(((i+ii).ge.1).and.((i+ii).le.molecule%mesh%Nx)) then
+                   if(.not.(ii.eq.0)) then
+                      if(molecule%mesh%ijk_to_idx(i+ii,j,k)%active) then
+                         molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+                         molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=&
+                              molecule%mesh%ijk_to_idx(i+ii,j,k)%n
+                         molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_neighbors)=ii
+                      else
+                         molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+                         molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=&
+                              molecule%mesh%ijk_to_idx(i+ii,j,k)%n
+                         molecule%mesh%node(nn)%idx_FD_coeff(molecule%mesh%node(nn)%n_bound)=ii
+                         molecule%mesh%node(molecule%mesh%ijk_to_idx(i+ii,j,k)%n)%usefull_unactive=.TRUE.
+                      end if
+                   end if
+                end if
+             end do
+          end do
+
+
+
+          ! do nn=1,molecule%mesh%nactive
+          !    i=molecule%mesh%node(nn)%i
+          !    if(i.gt.1) then
+          !       if(molecule%mesh%ijk_to_idx(i-1,j,k)%active) then
+          !          molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+          !          molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i-1,j,k)%n
+          !       else
+          !          molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+          !          molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i-1,j,k)%n
+          !          molecule%mesh%node(molecule%mesh%ijk_to_idx(i-1,j,k)%n)%usefull_unactive=.TRUE.
+          !       end if
+          !    end if
+          !    if(i.lt.molecule%mesh%Nx) then
+          !       if(molecule%mesh%ijk_to_idx(i+1,j,k)%active) then
+          !          molecule%mesh%node(nn)%n_neighbors=molecule%mesh%node(nn)%n_neighbors+1
+          !          molecule%mesh%node(nn)%list_neighbors(molecule%mesh%node(nn)%n_neighbors)=molecule%mesh%ijk_to_idx(i+1,j,k)%n
+          !       else
+          !          molecule%mesh%node(nn)%n_bound=molecule%mesh%node(nn)%n_bound+1
+          !          molecule%mesh%node(nn)%list_bound(molecule%mesh%node(nn)%n_bound)=molecule%mesh%ijk_to_idx(i+1,j,k)%n
+          !          molecule%mesh%node(molecule%mesh%ijk_to_idx(i+1,j,k)%n)%usefull_unactive=.TRUE.
+          !       end if
+          !    end if
+          ! end do
+       else
+       print *,' STOP in compute_list_neighbors(): dimension=',molecule%mesh%dim,' not yet implemented!'
+       stop
+    end if
+    
+    molecule%mesh%n_usefull_unactive=0
+    do i=1,molecule%mesh%Ntot
+!       print *,molecule%mesh%node(i)%active,molecule%mesh%node(i)%usefull_unactive,molecule%mesh%node(i)%n_bound
+       if(molecule%mesh%node(i)%usefull_unactive) then
+          molecule%mesh%n_usefull_unactive=molecule%mesh%n_usefull_unactive+1
+       end if
+    end do
+    print *,"# n usefull unactive nodes = ",molecule%mesh%n_usefull_unactive
+!    stop
+  end subroutine compute_list_neighbors_new
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !
   ! update_bound(idx,i,j,k,di,dj,dk,m)

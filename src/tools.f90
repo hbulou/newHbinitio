@@ -309,6 +309,60 @@ contains
   end subroutine compute_density
   ! --------------------------------------------------------------------------------------
   !
+  !              compute_density()
+  !
+  ! --------------------------------------------------------------------------------------
+       subroutine compute_density_new(molecule,V,mesh)
+         implicit none
+         type(t_molecule)::molecule
+         type(t_mesh)::mesh
+         double precision::V(:,:)
+         integer::i,j
+         double precision::charge
+         double precision,allocatable::b(:)
+
+         do j=1,molecule%wf%nwfc
+            if(.not.(molecule%wf%occ(j).eq.0)) then
+               call dcopy(molecule%mesh%nactive,V(:,j),1,molecule%wf%wfc(:,j),1)
+               call norm(mesh,molecule%wf%wfc(:,j))
+            end if
+         end do
+
+         molecule%rho=0.0
+         do j=1,molecule%wf%nwfc
+            if(.not.(molecule%wf%occ(j).eq.0)) then
+               do i=1,mesh%nactive
+                  molecule%rho(i)=molecule%rho(i)-molecule%wf%wfc(i,j)**2
+               end do
+            end if
+         end do
+         charge=mesh%dv*sum(molecule%rho)
+         print *,"Compute density > Charge ",charge
+         print *,"Compute density > mesh%dv=",mesh%dv
+         print *,"Compute density > mesh%dx=",mesh%dx
+         print *,"Compute density > mesh%Nx=",mesh%Nx
+         print *,"Compute density > mesh%Ntot=",mesh%Ntot
+         print *,"Compute density > mesh%Nactive=",mesh%nactive
+         print *,"Compute density > mesh%Nunactive=",mesh%nunactive
+         do i=1,mesh%nbound
+            mesh%bound(i)%val=charge/mesh%bound(i)%d
+            !print *,mesh%bound(i)%q,mesh%bound(i)%val
+         end do
+         
+
+    allocate(b(mesh%nactive))
+    do i=1,mesh%nactive
+       b(i)=molecule%rho(i)
+       do j=1,mesh%n_bound(i)
+          b(i)=b(i)+mesh%bound(mesh%list_bound(i,j))%val/mesh%dx**2
+       end do
+!       print *,b(i)
+    end do
+!    b(mesh%nactive-1)=b(mesh%nactive-1)-U(mesh%nactive)/mesh%dx**2
+!    call Conjugate_gradient_3D(-b,pot%hartree,mesh%nactive,mesh%dx,mesh)    
+  end subroutine compute_density_new
+  ! --------------------------------------------------------------------------------------
+  !
   !             interpolate()
   !
   ! --------------------------------------------------------------------------------------

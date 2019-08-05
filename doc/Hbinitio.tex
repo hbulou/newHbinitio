@@ -28,7 +28,14 @@
   line/.style = {draw},
 }
 \usepackage{amsmath}
+%\usepackage{minted}
+
+\usepackage[linesnumbered,lined,boxed,commentsnumbered,ruled]{algorithm2e}
+
 \begin{document}
+
+
+\tableofcontents
 
 A detailled description of the application of the finite difference method to the electronic structure has been given by Laaksonen et al in the case of an Hartree-Fock approcach\cite{laaksonen1986}.
 
@@ -238,6 +245,31 @@ It must be ended by the line \verb+cmd=end+ to indicate the end of the file.
 \newpage
 
 \section{Structure of the code}
+
+
+\begin{algorithm}[H]
+ \KwData{this text}
+ \KwResult{how to write algorithm with \LaTeX2e }
+ initialization\;
+ \While{not at end of this document}{
+    \While{.not.(is\_iostat\_end(param\%ieof))).and.(.not.(end\_loop)}{
+       read(2,'(A)') line
+       call line_parser(line,nfield,field)
+       print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
+       call parse_line(param,field,nfield,end_loop,syst%nmol,syst%molecule,syst%time_spent,syst)
+       print *,"end_loop=",end_loop
+    end do}
+
+  read current\;
+  \eIf{understand}{
+   go to next section\;
+   current section becomes this one\;
+   }{
+   go back to the beginning of current section\;
+  }
+ }
+ \caption{read\_param(syst)}
+\end{algorithm}
 
 
 

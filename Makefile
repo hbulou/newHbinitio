@@ -9,6 +9,8 @@ clean_test:
 	cd test/davidson1D ; find ./ -name "*.png" -exec rm {} \; ;  rm  ./davidson1D/*
 dav1d:
 	cd test/davidson1D ; ../../bin/$(EXEC) inp_davidson1D
+dav3d:
+	cd test/davidson3D ; ../../bin/$(EXEC) inp_davidson3D
 experiment:
 	cd test/Experiment ; ../../bin/$(EXEC) inp_Experiment
 numerov:

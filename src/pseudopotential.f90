@@ -44,6 +44,9 @@ contains
        pp%pot(i,:)=pp%pot(i,:)/pp%r(:)
     end do
     open(unit=1,file='pot.dat',form='formatted',status='unknown')
+    write(1,*) '# number of points=',pp%n
+    write(1,*) '# zval=',pp%zval
+    write(1,*) '# number of pp=',pp%lmax,' from l=0 to l=',pp%lmax-1
     do i=1,pp%n
        write(1,*) pp%r(i),(pp%pot(j,i),j=0,pp%lmax-1),-2*pp%zval/pp%r(i)
     end do

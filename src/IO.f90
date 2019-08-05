@@ -121,7 +121,7 @@ contains
           do j=1,m%Ny
              nn=m%ijk_to_idx(i,j,k)%n
              val=data(nn)
-!             if(.not.(m%node(nn)%active)) val=0.0
+             if(.not.(m%node(nn)%active)) val=0.0
              write(1,'(E13.5)',advance='no') val
              ifield=ifield+1
              if (mod(ifield,6).eq.0) then
@@ -192,6 +192,60 @@ contains
   end subroutine save_wavefunction
   ! --------------------------------------------------------------------------------------
   !
+  !              save_wavefunction_new(mesh,V,molecule)
+  !
+  ! --------------------------------------------------------------------------------------
+  subroutine save_wavefunction_new(mesh,V,molecule)
+    implicit none
+    type(t_mesh)::mesh
+    double precision::V(:,:)
+    type(t_molecule)::molecule
+    
+    integer :: i,j,k,nn
+    double precision::val
+    character (len=1024) :: filecube
+    
+    do i=1,molecule%cvg%nvec_to_cvg
+       call norm(mesh,V(:,i))
+       call dcopy(molecule%mesh%nactive,V(:,i),1,molecule%wf%wfc(:,i),1)
+
+       select case(mesh%dim)
+          ! case 3D
+       case(3)
+          write(filecube,'(a,i0,a)') 'evec',i,'.cube'
+          call save_cube_3D(V(:,i),filecube,mesh)
+          ! case 2D
+       case(2)
+          write(filecube,'(a,i0,a)') 'evec',i,'.dat'
+          open(unit=1,file=filecube,form='formatted',status='unknown')
+          do j=1,mesh%Nx
+             do k=1,mesh%Ny
+                nn=mesh%ijk_to_idx(j,k,1)%n
+                val=0.0
+                if(mesh%node(nn)%active) val=V(nn,i)
+
+                write(1,*) j*mesh%dx,k*mesh%dy,val
+             end do
+          end do
+          close(1)
+          ! case 1D
+       case(1)
+          write(filecube,'(a,i0,a)') 'evec',i,'.dat'
+!          write(filecube,'(a,i0,a)') 'evec',i,'.dat'
+          open(unit=1,file=filecube,form='formatted',status='unknown')
+          do j=1,mesh%nactive
+             write(1,*) j*mesh%dx,V(j,i)
+          end do
+          close(1)
+       case default
+          print *,' STOP in main(): dimension=',mesh%dim,' not yet implemented!'
+          stop
+       end select
+    end do
+
+  end subroutine save_wavefunction_new
+  ! --------------------------------------------------------------------------------------
+  !
   !                             save_config()
   !
   ! subroutine to save the configuration of the calculation in order to restart it
@@ -215,6 +269,30 @@ contains
     end do
     close(1)
   end subroutine save_config
+  ! --------------------------------------------------------------------------------------
+  !
+  !                             save_config_new()
+  !
+  ! subroutine to save the configuration of the calculation in order to restart it
+  ! later if necessary
+  ! --------------------------------------------------------------------------------------
+  subroutine save_config_new(V,m,nvecmin)
+    implicit none
+    type(t_mesh)::m
+    double precision :: V(:,:)
+    integer::nvecmin,i,j
+    character (len=1024)::filename
+
+    write(filename,'(a)') 'evectors.dat'
+    print *,"# save_config > saving ",trim(filename)
+    open(unit=1,file=filename,form='formatted',status='unknown')
+    write(1,*) "# nmesh=",m%nactive
+    write(1,*) "# nvec=",nvecmin
+    do i=1,m%nactive
+       write(1,*) (V(i,j),j=1,nvecmin)
+    end do
+    close(1)
+  end subroutine save_config_new
   ! --------------------------------------------------------------------------------------
   !
   !              read_config()

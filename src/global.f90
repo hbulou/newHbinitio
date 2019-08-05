@@ -117,6 +117,7 @@ module global
      type(tt_cvg),allocatable::wfc(:)
      integer,allocatable::list_idx(:)
      double precision :: ETA
+     integer::loopmax
      integer :: nvec_to_cvg
      integer :: ncvg
      logical::cvg
@@ -173,8 +174,10 @@ module global
   type t_node
      integer::n_neighbors
      integer,allocatable::list_neighbors(:)
+     integer,allocatable::idx_FD_coeff(:)
      integer::n_bound
      integer,allocatable::list_bound(:)
+     double precision,allocatable::idx_FD_coeff_bound(:)
      logical::active, usefull_unactive
      integer::i,j,k
      double precision::q(3)
@@ -231,6 +234,26 @@ module global
   end type t_numerov
   ! -----------------------------------------------------------
   !
+  !   DAVIDSON data type
+  !
+  ! ----------------------------------------------------------
+  type t_davidson
+     integer::nvecmin
+     integer::nvecmax
+     logical::init_wf
+     logical::restart
+  end type t_davidson
+  ! -----------------------------------------------------------
+  !
+  !   APPROX data type
+  !
+  ! ----------------------------------------------------------
+  type t_approx
+     integer::k  ! for approximating the dirivatives; see Varga & Karman p14
+     double precision,allocatable::FD_coeff(:)
+  end type t_approx
+  ! -----------------------------------------------------------
+  !
   !   MOLECULE data type
   !
   ! ----------------------------------------------------------
@@ -242,6 +265,8 @@ module global
      type(t_cvg) :: cvg
      type(t_param)::param
      type(t_numerov)::numerov
+     type(t_davidson)::davidson
+     type(t_approx)::approx
      double precision::mixing   ! mixing scheme
   end type t_molecule
   ! -----------------------------------------------------------

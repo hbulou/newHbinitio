@@ -10,6 +10,8 @@ module param_mod
   use tdse_mod
   use numerov_mod_dev
   use pseudopotential
+  use wfc
+  use cvg
   implicit none
 contains
   ! --------------------------------------------------------------------------------------
@@ -193,6 +195,9 @@ contains
                 read(field(i+3),*) molecule(idxmol)%mesh%box%center(3)
              case("N")
                 read(field(i+1),*) molecule(idxmol)%mesh%Nx
+                read(field(i+2),*) molecule(idxmol)%mesh%Ny
+                read(field(i+3),*) molecule(idxmol)%mesh%Nz
+                molecule(idxmol)%mesh%Ntot=molecule(idxmol)%mesh%Nx*molecule(idxmol)%mesh%Ny*molecule(idxmol)%mesh%Nz
               case("norbital")
                 read(field(i+1),*) molecule(idxmol)%wf%nwfc
               case("mixing")
@@ -231,14 +236,37 @@ contains
        !call new_molecule(molecule(idxmol),molecule(idxmol)%param)
        !call new_molecule(molecule(idxmol),param)
        !       print *, "# Changing molecule  ",idxmol
+
        
+       ! MOLECULE
     case("molecule") 
-       select case (trim(field(2)))
+       read(field(2),*) idxmol
+       select case (trim(field(3)))
+
+       case("cvg")
+          print *,"----------------------------------"
+          print *,"     CVG               "
+          print *,"----------------------------------"
+          select case (trim(field(4)))
+          case("init")
+             call init_cvg(molecule(idxmol))
+          end select
+
+       case ("davidson")
+          print *,"----------------------------------"
+          print *,"          DAVIDSON            "
+          print *,"----------------------------------"
+          call davidson_new(molecule(idxmol)%mesh,&
+               molecule(idxmol)%cvg,&
+               molecule(idxmol),&
+               molecule(idxmol)%pot,&
+               time_spent)    
+
+
        case("new")
           print *,"----------------------------------"
           print *,"     NEW  MOLECULE                "
           print *,"----------------------------------"
-          
           nmol=nmol+1
           print *,allocated(molecule)
           if(.not.(allocated(molecule))) then
@@ -258,7 +286,207 @@ contains
              !    call move_alloc(junk,molecule)
           end if
           print *, "# creating a molecule -> ",nmol," molecule(s)"
-       end select
+       case("info")
+          print *,"----------------------------------"
+          print *,"     INFO MOLECULE ",idxmol
+          print *,"----------------------------------"
+          print *,"#DIMENSION ",molecule(idxmol)%mesh%dim
+          print *,"#Nx ",molecule(idxmol)%mesh%Nx
+          print *,"#Ny ",molecule(idxmol)%mesh%Ny
+          print *,"#Nz ",molecule(idxmol)%mesh%Nz
+          print *,"#Ntot ",molecule(idxmol)%mesh%Ntot
+          print *,"#dx ",molecule(idxmol)%mesh%dx," a. u."
+          print *,"#dy ",molecule(idxmol)%mesh%dy," a. u."
+          print *,"#dz ",molecule(idxmol)%mesh%dz," a. u."
+          print *,"#dv ",molecule(idxmol)%mesh%dv," (a. u.)^dim"
+          print *,"#width ",molecule(idxmol)%mesh%box%width," a. u."
+          print *,"#shape ",molecule(idxmol)%mesh%box%shape
+          print *,"#radius ",molecule(idxmol)%mesh%box%radius," a.u."
+          print *,"#center= ",molecule(idxmol)%mesh%box%center
+          print *,"# ------- MESH -------"
+          print *,"#mesh(nactive)= ",molecule(idxmol)%mesh%nactive
+          print *,"#mesh(nunactive)= ",molecule(idxmol)%mesh%nunactive
+          print *,"#mesh(n_usefull_unactive)= ",molecule(idxmol)%mesh%n_usefull_unactive
+          print *,"#mesh(nbound)= ",molecule(idxmol)%mesh%nbound
+          print *,"# ------- DAVIDSON -------"
+          print *,"#restart= ",molecule(idxmol)%davidson%restart
+          print *,"#init_wfc= ",molecule(idxmol)%davidson%init_wf
+          print *,"#nvecmin= ",molecule(idxmol)%davidson%nvecmin
+          print *,"#nvecmax= ",molecule(idxmol)%davidson%nvecmax
+          print *,"# ------- WFC -------"
+          print *,"#nwfc= ",molecule(idxmol)%wf%nwfc
+          
+       case("generate")
+          print *,"----------------------------------"
+          print *,"     GENERATE               "
+          print *,"----------------------------------"
+          select case (trim(field(4)))
+          case("mesh")
+             call new_mesh_new(molecule(idxmol))
+          end select
+
+       case("new2")
+          print *,"----------------------------------"
+          print *,"     NEW  MOLECULE  (2)               "
+          print *,"----------------------------------"
+          print *,allocated(molecule)
+          if(.not.(allocated(molecule))) then
+             allocate(molecule(idxmol))
+!             call init_param_molecule(molecule(nmol),param)
+!             call new_molecule(molecule(nmol),molecule(nmol)%param)
+!             call print_param(molecule(nmol)%param)
+!             call print_param(param)
+             !call exit()
+          else
+             print *,"Not yet implemented"
+             call exit()
+             !    allocate(junk(nmol-1))
+             !    call move_alloc(molecule,junk)
+             !    allocate(molecule(nmol))
+             !    call move_alloc(junk,molecule)
+          end if
+          print *, "# creating a molecule -> ",nmol," molecule(s)"
+
+       case("potential")
+          print *,"----------------------------------"
+          print *,"     POTENTIAL               "
+          print *,"----------------------------------"
+          select case (trim(field(4)))
+          case("init")
+             call init_pot(molecule(idxmol))
+          case("save")
+             write(filename,'(a)') field(5)
+             call save_potential_new(filename,molecule(idxmol))
+          end select
+
+       case("set")
+          print *,"----------------------------------"
+          print *,"     SET  molecule ",idxmol
+          print *,"----------------------------------"
+          do i=4,nfield
+             select case (trim(field(i)))
+             case("dimension") 
+                read(field(i+1),*) molecule(idxmol)%mesh%dim
+             case("width")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%width
+                print *,"width= ",molecule(idxmol)%mesh%box%width
+             case("shape")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%shape
+             case("radius")
+                read(field(i+1),*) molecule(idxmol)%mesh%box%radius
+             case("box_center") 
+                read(field(i+1),*) molecule(idxmol)%mesh%box%center(1)
+                read(field(i+2),*) molecule(idxmol)%mesh%box%center(2)
+                read(field(i+3),*) molecule(idxmol)%mesh%box%center(3)
+             case("N")
+                read(field(i+1),*) molecule(idxmol)%mesh%Nx
+                read(field(i+2),*) molecule(idxmol)%mesh%Ny
+                read(field(i+3),*) molecule(idxmol)%mesh%Nz
+                molecule(idxmol)%mesh%Ntot=molecule(idxmol)%mesh%Nx*&
+                     molecule(idxmol)%mesh%Ny*molecule(idxmol)%mesh%Nz
+             case("norbital")
+                read(field(i+1),*) molecule(idxmol)%wf%nwfc
+             case("approx_FD")
+                read(field(i+1),*) molecule(idxmol)%approx%k
+                allocate(molecule(idxmol)%approx%FD_coeff(-molecule(idxmol)%approx%k:molecule(idxmol)%approx%k))
+
+                select case(molecule(idxmol)%approx%k)
+                   case(1)
+                      molecule(idxmol)%approx%FD_coeff(-1)=1.0
+                      molecule(idxmol)%approx%FD_coeff(0)=-2.0 ;
+                      molecule(idxmol)%approx%FD_coeff(1)=1.0
+                   case(2)
+                      molecule(idxmol)%approx%FD_coeff(-2)=-1.0/12.0
+                      molecule(idxmol)%approx%FD_coeff(-1)=4.0/3.0 ;
+                      molecule(idxmol)%approx%FD_coeff(0)=-5.0/2.0 ;
+                      molecule(idxmol)%approx%FD_coeff(1)=4.0/3.0 ;
+                      molecule(idxmol)%approx%FD_coeff(2)=-1.0/12.0
+                   case(3)
+                      molecule(idxmol)%approx%FD_coeff(-3)=1.0/90.0
+                      molecule(idxmol)%approx%FD_coeff(-2)=-3.0/20.0
+                      molecule(idxmol)%approx%FD_coeff(-1)=3.0/2.0 ;
+                      molecule(idxmol)%approx%FD_coeff(0)=-49.0/18.0 ;
+                      molecule(idxmol)%approx%FD_coeff(1)=3.0/2.0 ;
+                      molecule(idxmol)%approx%FD_coeff(2)=-3.0/20.0
+                      molecule(idxmol)%approx%FD_coeff(3)=1.0/90.0
+                   case(4)
+                      molecule(idxmol)%approx%FD_coeff(-4)=-1.0/560.0
+                      molecule(idxmol)%approx%FD_coeff(-3)=8.0/315
+                      molecule(idxmol)%approx%FD_coeff(-2)=-1.0/5.0
+                      molecule(idxmol)%approx%FD_coeff(-1)=8.0/5.0 ;
+                      molecule(idxmol)%approx%FD_coeff(0)=-205.0/72.0 ;
+                      molecule(idxmol)%approx%FD_coeff(1)=8.0/5.0 ;
+                      molecule(idxmol)%approx%FD_coeff(2)=-1.0/5.0
+                      molecule(idxmol)%approx%FD_coeff(3)=8.0/315.0
+                      molecule(idxmol)%approx%FD_coeff(4)=-1.0/560.0
+                   case default
+                      print *,' STOP in param.f90 line 405'
+                      stop
+                   end select
+             case("mixing")
+                read(field(i+1),*) molecule(idxmol)%mixing
+             case("nvec_to_cvg")
+                read(field(i+1),*) molecule(idxmol)%cvg%nvec_to_cvg
+             case("loopmax")
+                read(field(i+1),*) molecule(idxmol)%cvg%loopmax
+             case("ETA")
+                read(field(i+1),*) molecule(idxmol)%cvg%ETA
+             case("nloopmax")
+                read(field(i+1),*) molecule(idxmol)%param%loopmax
+             case("occupation") 
+                if(.not.(allocated(molecule(idxmol)%wf%occ))) then
+                   allocate(molecule(idxmol)%wf%occ(molecule(idxmol)%wf%nwfc))
+                end if
+                do j=1,molecule(idxmol)%wf%nwfc
+                   read(field(i+j),*) molecule(idxmol)%wf%occ(j)
+                end do
+             case("tdse_nstep")
+                read(field(i+1),*) molecule(idxmol)%param%tdse%nstep
+             case("tdse_freq_save")
+                read(field(i+1),*) molecule(idxmol)%param%tdse%freq_save
+             case("numerov_Z")
+                read(field(i+1),*) molecule(idxmol)%numerov%Z
+             case("davidson_nvecmin")
+                read(field(i+1),*) molecule(idxmol)%davidson%nvecmin
+             case("davidson_nvecmax")
+                read(field(i+1),*) molecule(idxmol)%davidson%nvecmax
+             case("davidson_init_wf")
+                read(field(i+1),* ) molecule(idxmol)%davidson%init_wf
+             case("davidson_restart")
+                read(field(i+1),* ) molecule(idxmol)%davidson%restart
+             case("numerov_nmax")
+                read(field(i+1),*) molecule(idxmol)%numerov%nmax
+             case("hartree") 
+                read(field(i+1),*) molecule(idxmol)%param%hartree
+             case("exchange") 
+                read(field(i+1),*) molecule(idxmol)%param%exchange
+             end select
+          end do
+
+       case("wfc")
+          print *,"----------------------------------"
+          print *,"     WAVEFUNCTIONS               "
+          print *,"----------------------------------"
+          select case (trim(field(4)))
+          case("init")
+             call init_wfc(molecule(idxmol))
+          end select
+
+
+       end select  ! MOLECULE
+
+
+
+
+
+
+
+
+
+
+
+
+       
     case ("davidson")
        print *,"----------------------------------"
        print *,"          DAVIDSON            "
@@ -561,6 +789,7 @@ contains
 !       deallocate(coeff)
        deallocate(tdse_wfc)
     case("end")
+       print *,"END"
        end_loop=.TRUE.
        
        !       call exit()
@@ -664,15 +893,16 @@ contains
     syst%nmol=0
     call init_param(param)
 
-    print *,'Reading ',trim(syst%inputfile)
+    print *,'# read_param()> Reading ',trim(syst%inputfile)
     open(unit=2,file=syst%inputfile,form='formatted')
     end_loop=.FALSE.
     do while((.not.(is_iostat_end(param%ieof))).and.(.not.(end_loop)))
        read(2,'(A)') line
+       !print *,line
        call line_parser(line,nfield,field)
-       print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
+       !print *,nfield,' --> ',(trim(field(i)),i=1,nfield)
        call parse_line(param,field,nfield,end_loop,syst%nmol,syst%molecule,syst%time_spent,syst)
-       print *,"end_loop=",end_loop
+       !print *,"end_loop=",end_loop
     end do
     close(2)    
 
@@ -854,7 +1084,7 @@ contains
     logical::exist_file
     integer::i
 
-    print *," Starting new_molecule()"
+    print *,"# new_molecule> Starting new_molecule()"
 
     if(param%dim.lt.3) param%box%center(3)=0.0
     if(param%dim.lt.2) param%box%center(2)=0.0
