@@ -1,0 +1,69 @@
+molecule 1 new2
+molecule 1 set           dimension 1
+molecule 1 set           N 60 60 60
+molecule 1 set           nloopmax 2000
+molecule 1 set           width 3
+molecule 1 set           box_center 1.5 1.5 1.5
+molecule 1 set           shape cube
+molecule 1 set           radius 1.1107207
+molecule 1 set           norbital 20
+molecule 1 set           occupation 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+molecule 1 set           nvec_to_cvg 11
+molecule 1 set           ETA 1.0e-6
+molecule 1 set           loopmax 10000
+molecule 1 set           davidson_nvecmin 20
+molecule 1 set           davidson_nvecmax 60
+molecule 1 set           davidson_init_wf .TRUE.
+molecule 1 set           approx_FD 2
+molecule 1 generate mesh 
+molecule 1 potential init
+molecule 1 potential save essai.agr
+molecule 1 wfc init
+molecule 1 cvg init
+molecule 1 info 
+molecule 1 davidson 
+end
+
+cube 60x60x60 lv 1
+Main > Eig. val.(  1):     2.769815(   -0.23E-10) | r(  1)=   0.1569E-11/  0.10E-05 T11/11
+Main > Eig. val.(  2):     5.535506(   -0.37E-09) | r(  2)=   0.2713E-10/  0.10E-05 T11/11
+Main > Eig. val.(  3):     5.535506(   -0.50E-08) | r(  3)=   0.3555E-09/  0.10E-05 T11/11
+Main > Eig. val.(  4):     5.535506(   -0.80E-08) | r(  4)=   0.5818E-09/  0.10E-05 T11/11
+Main > Eig. val.(  5):     8.301199(   -0.29E-07) | r(  5)=   0.2078E-08/  0.10E-05 T11/11
+Main > Eig. val.(  6):     8.301200(   -0.80E-07) | r(  6)=   0.5877E-08/  0.10E-05 T11/11
+Main > Eig. val.(  7):     8.301222(   -0.64E-06) | r(  7)=   0.4675E-07/  0.10E-05 T11/11
+Main > Eig. val.(  8):    10.131292(   -0.64E-06) | r(  8)=   0.4712E-07/  0.10E-05 T11/11
+Main > Eig. val.(  9):    10.131500(   -0.51E-05) | r(  9)=   0.3487E-06/  0.10E-05 T11/11
+Main > Eig. val.( 10):    10.131933(   -0.13E-04) | r( 10)=   0.9667E-06/  0.10E-05 T11/11
+Main > Eig. val.( 11):    11.067528(   -0.11E-04) | r( 11)=   0.8283E-06/  0.10E-05 T11/11
+
+
+Cube 40x40x40 lv 1
+Main > Eig. val.(  1):     2.874889(   -0.45E-11) | r(  1)=   0.4280E-12/  0.10E-05 T11/11
+Main > Eig. val.(  2):     5.739945(   -0.92E-11) | r(  2)=   0.9720E-12/  0.10E-05 T11/11
+Main > Eig. val.(  3):     5.739945(   -0.32E-09) | r(  3)=   0.3364E-10/  0.10E-05 T11/11
+Main > Eig. val.(  4):     5.739945(   -0.18E-08) | r(  4)=   0.1801E-09/  0.10E-05 T11/11
+Main > Eig. val.(  5):     8.605001(   -0.52E-08) | r(  5)=   0.5371E-09/  0.10E-05 T11/11
+Main > Eig. val.(  6):     8.605002(   -0.66E-07) | r(  6)=   0.6623E-08/  0.10E-05 T11/11
+Main > Eig. val.(  7):     8.605002(   -0.12E-06) | r(  7)=   0.1302E-07/  0.10E-05 T11/11
+Main > Eig. val.(  8):    10.482363(   -0.13E-06) | r(  8)=   0.1357E-07/  0.10E-05 T11/11
+Main > Eig. val.(  9):    10.482373(   -0.60E-06) | r(  9)=   0.6446E-07/  0.10E-05 T11/11
+Main > Eig. val.( 10):    10.482539(   -0.96E-05) | r( 10)=   0.9165E-06/  0.10E-05 T11/11
+Main > Eig. val.( 11):    11.470179(   -0.53E-05) | r( 11)=   0.5546E-06/  0.10E-05 T11/11
+
+
+
+
+Cube 60x60x60 lv 1
+Main > Eig. val.(  1):     0.997133(   -0.24E-10) | r(  1)=   0.2974E-11/  0.10E-05 T11/11
+Main > Eig. val.(  2):     1.992782(   -0.38E-09) | r(  2)=   0.4389E-10/  0.10E-05 T11/11
+Main > Eig. val.(  3):     1.992782(   -0.44E-08) | r(  3)=   0.5257E-09/  0.10E-05 T11/11
+Main > Eig. val.(  4):     1.992782(   -0.76E-08) | r(  4)=   0.8892E-09/  0.10E-05 T11/11
+Main > Eig. val.(  5):     2.988432(   -0.21E-07) | r(  5)=   0.2544E-08/  0.10E-05 T11/11
+Main > Eig. val.(  6):     2.988433(   -0.61E-07) | r(  6)=   0.7254E-08/  0.10E-05 T11/11
+Main > Eig. val.(  7):     2.988449(   -0.47E-06) | r(  7)=   0.5470E-07/  0.10E-05 T11/11
+Main > Eig. val.(  8):     3.647273(   -0.46E-06) | r(  8)=   0.5315E-07/  0.10E-05 T11/11
+Main > Eig. val.(  9):     3.647400(   -0.28E-05) | r(  9)=   0.3568E-06/  0.10E-05 T11/11
+Main > Eig. val.( 10):     3.647659(   -0.82E-05) | r( 10)=   0.9675E-06/  0.10E-05 T11/11
+Main > Eig. val.( 11):     3.984446(   -0.66E-05) | r( 11)=   0.7894E-06/  0.10E-05 T11/11
+
